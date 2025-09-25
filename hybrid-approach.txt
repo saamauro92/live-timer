@@ -1,0 +1,425 @@
+// Updated Timer Controller - HTTP-based commands
+import { Request, Response } from 'express';
+import { z } from 'zod';
+import { timerService } from '../services/timer.service';
+import { roomService } from '../services/room.service';
+import { socketService } from '../services/socket.service';
+import { logger } from '../utils/logger';
+
+const timerActionSchema = z.object({
+  action: z.enum(['start', 'pause', 'reset'])
+});
+
+export class TimerController {
+  // POST /api/timers/:id/start
+  async startTimer(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const adminId = req.user?.id; // From JWT middleware
+      
+      // Validate timer exists and user has permission
+      const timer = await timerService.findById(id);
+      if (!timer) {
+        return res.status(404).json({
+          success: false,
+          message: 'Timer not found'
+        });
+      }
+      
+      const room = await roomService.findById(timer.roomId);
+      if (room.ownerId !== adminId) {
+        return res.status(403).json({
+          success: false,
+          message: 'Unauthorized: Only room owner can control timers'
+        });
+      }
+      
+      // Update timer state
+      const updatedTimer = await timerService.updateTimerState(id, 'start');
+      
+      // Broadcast to all room members via Socket.IO
+      socketService.emitToRoom(timer.roomId, 'timer-update', updatedTimer);
+      
+      logger.info(`Timer ${id} started by admin ${adminId} in room ${timer.roomId}`);
+      
+      res.json({
+        success: true,
+        data: updatedTimer,
+        message: 'Timer started successfully'
+      });
+      
+    } catch (error) {
+      logger.error('Error starting timer:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to start timer'
+      });
+    }
+  }
+
+  // POST /api/timers/:id/pause
+  async pauseTimer(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const adminId = req.user?.id;
+      
+      const timer = await timerService.findById(id);
+      if (!timer) {
+        return res.status(404).json({
+          success: false,
+          message: 'Timer not found'
+        });
+      }
+      
+      const room = await roomService.findById(timer.roomId);
+      if (room.ownerId !== adminId) {
+        return res.status(403).json({
+          success: false,
+          message: 'Unauthorized'
+        });
+      }
+      
+      const updatedTimer = await timerService.updateTimerState(id, 'pause');
+      
+      // Broadcast update
+      socketService.emitToRoom(timer.roomId, 'timer-update', updatedTimer);
+      
+      logger.info(`Timer ${id} paused by admin ${adminId}`);
+      
+      res.json({
+        success: true,
+        data: updatedTimer,
+        message: 'Timer paused successfully'
+      });
+      
+    } catch (error) {
+      logger.error('Error pausing timer:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to pause timer'
+      });
+    }
+  }
+
+  // POST /api/timers/:id/reset
+  async resetTimer(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const adminId = req.user?.id;
+      
+      const timer = await timerService.findById(id);
+      if (!timer) {
+        return res.status(404).json({
+          success: false,
+          message: 'Timer not found'
+        });
+      }
+      
+      const room = await roomService.findById(timer.roomId);
+      if (room.ownerId !== adminId) {
+        return res.status(403).json({
+          success: false,
+          message: 'Unauthorized'
+        });
+      }
+      
+      const updatedTimer = await timerService.updateTimerState(id, 'reset');
+      
+      // Broadcast update
+      socketService.emitToRoom(timer.roomId, 'timer-update', updatedTimer);
+      
+      logger.info(`Timer ${id} reset by admin ${adminId}`);
+      
+      res.json({
+        success: true,
+        data: updatedTimer,
+        message: 'Timer reset successfully'
+      });
+      
+    } catch (error) {
+      logger.error('Error resetting timer:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to reset timer'
+      });
+    }
+  }
+
+  // POST /api/rooms/:roomId/timers - Create new timer
+  async createTimer(req: Request, res: Response) {
+    try {
+      const { roomId } = req.params;
+      const adminId = req.user?.id;
+      
+      const createTimerSchema = z.object({
+        title: z.string().min(1).max(200),
+        description: z.string().optional(),
+        duration: z.number().min(1000).max(86400000) // 1 second to 24 hours in ms
+      });
+      
+      const data = createTimerSchema.parse(req.body);
+      
+      // Validate room ownership
+      const room = await roomService.findById(roomId);
+      if (!room || room.ownerId !== adminId) {
+        return res.status(403).json({
+          success: false,
+          message: 'Unauthorized'
+        });
+      }
+      
+      const newTimer = await timerService.create({
+        roomId,
+        ...data
+      });
+      
+      // Broadcast new timer to all room members
+      socketService.emitToRoom(roomId, 'timer-created', newTimer);
+      
+      logger.info(`New timer created in room ${roomId} by admin ${adminId}`);
+      
+      res.status(201).json({
+        success: true,
+        data: newTimer,
+        message: 'Timer created successfully'
+      });
+      
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          success: false,
+          message: 'Validation error',
+          errors: error.errors
+        });
+      }
+      
+      logger.error('Error creating timer:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to create timer'
+      });
+    }
+  }
+
+  // DELETE /api/timers/:id
+  async deleteTimer(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const adminId = req.user?.id;
+      
+      const timer = await timerService.findById(id);
+      if (!timer) {
+        return res.status(404).json({
+          success: false,
+          message: 'Timer not found'
+        });
+      }
+      
+      const room = await roomService.findById(timer.roomId);
+      if (room.ownerId !== adminId) {
+        return res.status(403).json({
+          success: false,
+          message: 'Unauthorized'
+        });
+      }
+      
+      await timerService.delete(id);
+      
+      // Broadcast deletion to all room members
+      socketService.emitToRoom(timer.roomId, 'timer-deleted', { timerId: id });
+      
+      logger.info(`Timer ${id} deleted by admin ${adminId}`);
+      
+      res.json({
+        success: true,
+        message: 'Timer deleted successfully'
+      });
+      
+    } catch (error) {
+      logger.error('Error deleting timer:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to delete timer'
+      });
+    }
+  }
+
+  // GET /api/rooms/:roomId/timers - Get all timers (for fallback sync)
+  async getTimers(req: Request, res: Response) {
+    try {
+      const { roomId } = req.params;
+      const shareToken = req.query.shareToken as string;
+      const adminId = req.user?.id;
+      
+      let room;
+      
+      // Allow access via shareToken OR admin ownership
+      if (shareToken) {
+        room = await roomService.findByShareToken(shareToken);
+      } else if (adminId) {
+        room = await roomService.findById(roomId);
+        if (room && room.ownerId !== adminId) {
+          room = null; // Not authorized
+        }
+      }
+      
+      if (!room) {
+        return res.status(404).json({
+          success: false,
+          message: 'Room not found or unauthorized'
+        });
+      }
+      
+      const timers = await timerService.findByRoomId(roomId);
+      
+      res.json({
+        success: true,
+        data: {
+          room,
+          timers,
+          isAdmin: adminId === room.ownerId
+        }
+      });
+      
+    } catch (error) {
+      logger.error('Error fetching timers:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch timers'
+      });
+    }
+  }
+}
+
+// Updated Socket Service - Only for real-time updates
+export class SocketService {
+  private io: SocketServer;
+  private roomConnections = new Map<string, Set<string>>();
+
+  constructor(server: any) {
+    this.io = new SocketServer(server, {
+      cors: { origin: process.env.CORS_ORIGIN }
+    });
+    this.setupEventHandlers();
+  }
+
+  private setupEventHandlers() {
+    this.io.on('connection', (socket) => {
+      logger.info(`Client connected: ${socket.id}`);
+
+      // JOIN ROOM - Both admin and viewers
+      socket.on('join-room', async (data: { shareToken: string; userId?: string }) => {
+        try {
+          const room = await roomService.findByShareToken(data.shareToken);
+          if (!room) {
+            socket.emit('error', { message: 'Room not found' });
+            return;
+          }
+
+          const roomKey = `room:${room.id}`;
+          socket.join(roomKey);
+
+          // Store connection data
+          (socket.data as any).roomId = room.id;
+          (socket.data as any).userId = data.userId;
+          (socket.data as any).isAdmin = data.userId === room.ownerId;
+
+          // Track connection
+          if (!this.roomConnections.has(roomKey)) {
+            this.roomConnections.set(roomKey, new Set());
+          }
+          this.roomConnections.get(roomKey)!.add(socket.id);
+
+          // Send initial room state
+          const roomWithTimers = await roomService.findByIdWithTimers(room.id);
+          socket.emit('room-state', {
+            ...roomWithTimers,
+            isAdmin: data.userId === room.ownerId
+          });
+
+          // Update user count
+          const userCount = this.roomConnections.get(roomKey)!.size;
+          this.io.to(roomKey).emit('user-count', userCount);
+
+          logger.info(`User joined room ${room.id} via socket`);
+        } catch (error) {
+          logger.error('Error joining room:', error);
+          socket.emit('error', { message: 'Failed to join room' });
+        }
+      });
+
+      // HEARTBEAT - For connection health
+      socket.on('ping', () => {
+        socket.emit('pong');
+      });
+
+      // SYNC REQUEST - Manual sync when needed
+      socket.on('request-sync', async () => {
+        const socketData = socket.data as any;
+        if (socketData.roomId) {
+          try {
+            const room = await roomService.findByIdWithTimers(socketData.roomId);
+            socket.emit('room-state', room);
+          } catch (error) {
+            logger.error('Error syncing room state:', error);
+          }
+        }
+      });
+
+      // DISCONNECT HANDLER
+      socket.on('disconnect', () => {
+        const socketData = socket.data as any;
+        
+        if (socketData.roomId) {
+          const roomKey = `room:${socketData.roomId}`;
+          const connections = this.roomConnections.get(roomKey);
+          
+          if (connections) {
+            connections.delete(socket.id);
+            this.io.to(roomKey).emit('user-count', connections.size);
+            
+            if (connections.size === 0) {
+              this.roomConnections.delete(roomKey);
+            }
+          }
+        }
+        
+        logger.info(`Client disconnected: ${socket.id}`);
+      });
+    });
+  }
+
+  // Public method for HTTP controllers to broadcast updates
+  public emitToRoom(roomId: string, event: string, data: any) {
+    this.io.to(`room:${roomId}`).emit(event, data);
+    logger.debug(`Broadcasting ${event} to room ${roomId}`);
+  }
+
+  public getRoomStats(roomId: string) {
+    const roomKey = `room:${roomId}`;
+    const connections = this.roomConnections.get(roomKey);
+    return {
+      connectedUsers: connections ? connections.size : 0
+    };
+  }
+}
+
+// Routes setup (app.ts)
+import express from 'express';
+import { TimerController } from './controllers/timer.controller';
+import { authenticateAdmin } from './middleware/auth.middleware';
+
+const app = express();
+const timerController = new TimerController();
+
+// Timer control routes (HTTP-based, reliable)
+app.post('/api/timers/:id/start', authenticateAdmin, timerController.startTimer);
+app.post('/api/timers/:id/pause', authenticateAdmin, timerController.pauseTimer);
+app.post('/api/timers/:id/reset', authenticateAdmin, timerController.resetTimer);
+app.post('/api/rooms/:roomId/timers', authenticateAdmin, timerController.createTimer);
+app.delete('/api/timers/:id', authenticateAdmin, timerController.deleteTimer);
+
+// Public timer viewing (for fallback sync)
+app.get('/api/rooms/:roomId/timers', timerController.getTimers);
+
+export default app;

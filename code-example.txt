@@ -1,0 +1,385 @@
+// 1. Main Server Entry Point (src/server.ts)
+import cluster from 'cluster';
+import os from 'os';
+import { createApp } from './app';
+import { logger } from './utils/logger';
+
+const numCPUs = os.cpus().length;
+
+if (cluster.isPrimary && process.env.NODE_ENV === 'production') {
+  logger.info(`Master ${process.pid} is running`);
+  
+  // Fork workers
+  for (let i = 0; i < numCPUs; i++) {
+    cluster.fork();
+  }
+
+  cluster.on('exit', (worker, code, signal) => {
+    logger.warn(`Worker ${worker.process.pid} died`);
+    cluster.fork();
+  });
+} else {
+  const app = createApp();
+  const PORT = process.env.PORT || 3000;
+  
+  const server = app.listen(PORT, () => {
+    logger.info(`Worker ${process.pid} started on port ${PORT}`);
+  });
+
+  // Graceful shutdown
+  process.on('SIGTERM', () => {
+    logger.info('SIGTERM received, shutting down gracefully');
+    server.close(() => {
+      logger.info('Process terminated');
+      process.exit(0);
+    });
+  });
+}
+
+// 2. Socket.IO Service (src/services/socket.service.ts)
+import { Server as SocketServer } from 'socket.io';
+import { createAdapter } from '@socket.io/redis-adapter';
+import { Server } from 'http';
+import { redisClient } from '../config/redis';
+import { roomService } from './room.service';
+import { timerService } from './timer.service';
+import { logger } from '../utils/logger';
+
+export class SocketService {
+  private io: SocketServer;
+  private roomUsers = new Map<string, Set<string>>();
+
+  constructor(server: Server) {
+    this.io = new SocketServer(server, {
+      cors: {
+        origin: process.env.CORS_ORIGIN,
+        methods: ['GET', 'POST']
+      },
+      pingTimeout: 60000,
+      pingInterval: 25000
+    });
+
+    // Redis adapter for scaling
+    const subClient = redisClient.duplicate();
+    this.io.adapter(createAdapter(redisClient, subClient));
+
+    this.setupEventHandlers();
+  }
+
+  private setupEventHandlers() {
+    this.io.on('connection', (socket) => {
+      logger.info(`Client connected: ${socket.id}`);
+
+      socket.on('join-room', async (shareToken: string) => {
+        try {
+          const room = await roomService.findByShareToken(shareToken);
+          if (!room) {
+            socket.emit('error', { message: 'Room not found' });
+            return;
+          }
+
+          const roomId = `room:${room.id}`;
+          socket.join(roomId);
+          
+          // Track user in room
+          if (!this.roomUsers.has(roomId)) {
+            this.roomUsers.set(roomId, new Set());
+          }
+          this.roomUsers.get(roomId)!.add(socket.id);
+
+          // Send initial room state
+          socket.emit('room-state', room);
+          
+          // Update user count
+          this.io.to(roomId).emit('user-count', this.roomUsers.get(roomId)!.size);
+          
+          logger.info(`Client ${socket.id} joined room ${room.id}`);
+        } catch (error) {
+          logger.error('Error joining room:', error);
+          socket.emit('error', { message: 'Failed to join room' });
+        }
+      });
+
+      socket.on('timer-action', async (data: { timerId: string; action: 'start' | 'pause' | 'reset' }) => {
+        try {
+          const timer = await timerService.updateTimerState(data.timerId, data.action);
+          if (timer) {
+            this.io.to(`room:${timer.roomId}`).emit('timer-update', timer);
+          }
+        } catch (error) {
+          logger.error('Error updating timer:', error);
+          socket.emit('error', { message: 'Failed to update timer' });
+        }
+      });
+
+      socket.on('disconnect', () => {
+        // Clean up user from all rooms
+        this.roomUsers.forEach((users, roomId) => {
+          if (users.has(socket.id)) {
+            users.delete(socket.id);
+            this.io.to(roomId).emit('user-count', users.size);
+            
+            if (users.size === 0) {
+              this.roomUsers.delete(roomId);
+            }
+          }
+        });
+        
+        logger.info(`Client disconnected: ${socket.id}`);
+      });
+    });
+  }
+
+  public emitToRoom(roomId: string, event: string, data: any) {
+    this.io.to(`room:${roomId}`).emit(event, data);
+  }
+}
+
+// 3. Room Controller (src/controllers/room.controller.ts)
+import { Request, Response } from 'express';
+import { z } from 'zod';
+import { roomService } from '../services/room.service';
+import { logger } from '../utils/logger';
+
+const createRoomSchema = z.object({
+  name: z.string().min(1).max(100),
+  description: z.string().optional(),
+  ownerId: z.string().uuid()
+});
+
+export class RoomController {
+  async createRoom(req: Request, res: Response) {
+    try {
+      const data = createRoomSchema.parse(req.body);
+      const room = await roomService.create(data);
+      
+      logger.info(`Room created: ${room.id} by ${data.ownerId}`);
+      res.status(201).json({
+        success: true,
+        data: room
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          success: false,
+          message: 'Validation error',
+          errors: error.errors
+        });
+      }
+      
+      logger.error('Error creating room:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      });
+    }
+  }
+
+  async getRoomByShareToken(req: Request, res: Response) {
+    try {
+      const { shareToken } = req.params;
+      const room = await roomService.findByShareToken(shareToken);
+      
+      if (!room) {
+        return res.status(404).json({
+          success: false,
+          message: 'Room not found'
+        });
+      }
+
+      res.json({
+        success: true,
+        data: room
+      });
+    } catch (error) {
+      logger.error('Error fetching room:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      });
+    }
+  }
+}
+
+// 4. Timer Service (src/services/timer.service.ts)
+import { prisma } from '../config/database';
+import { v4 as uuidv4 } from 'uuid';
+
+interface CreateTimerData {
+  roomId: string;
+  title: string;
+  description?: string;
+  duration: number; // in milliseconds
+}
+
+export class TimerService {
+  async create(data: CreateTimerData) {
+    const now = new Date();
+    
+    return prisma.timer.create({
+      data: {
+        id: uuidv4(),
+        roomId: data.roomId,
+        title: data.title,
+        description: data.description,
+        startTimestamp: now,
+        endTimestamp: new Date(now.getTime() + data.duration),
+        duration: data.duration,
+        isActive: false
+      }
+    });
+  }
+
+  async updateTimerState(timerId: string, action: 'start' | 'pause' | 'reset') {
+    const timer = await prisma.timer.findUnique({
+      where: { id: timerId }
+    });
+
+    if (!timer) return null;
+
+    const now = new Date();
+    let updateData: any = {};
+
+    switch (action) {
+      case 'start':
+        updateData = {
+          isActive: true,
+          startTimestamp: now,
+          endTimestamp: new Date(now.getTime() + timer.duration)
+        };
+        break;
+        
+      case 'pause':
+        updateData = {
+          isActive: false,
+          duration: Math.max(0, timer.endTimestamp.getTime() - now.getTime())
+        };
+        break;
+        
+      case 'reset':
+        updateData = {
+          isActive: false,
+          startTimestamp: now,
+          endTimestamp: new Date(now.getTime() + timer.duration),
+          duration: timer.duration
+        };
+        break;
+    }
+
+    return prisma.timer.update({
+      where: { id: timerId },
+      data: updateData
+    });
+  }
+
+  async findByRoomId(roomId: string) {
+    return prisma.timer.findMany({
+      where: { roomId },
+      orderBy: { createdAt: 'asc' }
+    });
+  }
+}
+
+// 5. Prisma Schema (prisma/schema.prisma)
+/*
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Room {
+  id          String   @id @default(uuid())
+  name        String   @db.VarChar(100)
+  description String?  @db.Text
+  shareToken  String   @unique @default(uuid())
+  ownerId     String   @db.Uuid
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  updatedAt   DateTime @updatedAt @db.Timestamptz
+  
+  timers Timer[]
+  
+  @@map("rooms")
+  @@index([shareToken])
+  @@index([ownerId])
+}
+
+model Timer {
+  id             String   @id @default(uuid())
+  roomId         String   @db.Uuid
+  title          String   @db.VarChar(200)
+  description    String?  @db.Text
+  startTimestamp DateTime @db.Timestamptz
+  endTimestamp   DateTime @db.Timestamptz
+  duration       Int      // milliseconds
+  isActive       Boolean  @default(false)
+  createdAt      DateTime @default(now()) @db.Timestamptz
+  
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  
+  @@map("timers")
+  @@index([roomId])
+  @@index([isActive])
+}
+*/
+
+// 6. Rate Limiting Middleware (src/middleware/rateLimit.middleware.ts)
+import rateLimit from 'express-rate-limit';
+import { RedisStore } from 'rate-limit-redis';
+import { redisClient } from '../config/redis';
+
+export const globalRateLimit = rateLimit({
+  store: new RedisStore({
+    sendCommand: (...args: string[]) => redisClient.call(...args),
+  }),
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000'),
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'),
+  message: {
+    success: false,
+    message: 'Too many requests, please try again later'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+export const createRoomLimit = rateLimit({
+  store: new RedisStore({
+    sendCommand: (...args: string[]) => redisClient.call(...args),
+  }),
+  windowMs: 60000, // 1 minute
+  max: 5, // 5 rooms per minute per IP
+  message: {
+    success: false,
+    message: 'Too many rooms created, please try again later'
+  }
+});
+
+// 7. Docker Configuration (Dockerfile)
+/*
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies
+COPY package*.json ./
+RUN npm ci --only=production
+
+# Copy source code
+COPY . .
+
+# Build TypeScript
+RUN npm run build
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:$PORT/health || exit 1
+
+EXPOSE 3000
+
+USER node
+
+CMD ["node", "dist/server.js"]
+*/

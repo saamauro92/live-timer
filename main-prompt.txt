@@ -1,0 +1,193 @@
+# Cursor Prompt: Scalable Node.js Countdown Timer Server
+
+## Project Overview
+Build a production-ready, high-performance Node.js server using TypeScript that manages countdown timer rooms for events. The server should be optimized for scalability and real-time communication with Vue.js clients via Socket.IO.
+
+## Architecture Requirements
+
+### Core Technologies
+- **Runtime**: Node.js 20+ with TypeScript
+- **Framework**: Express.js with Helmet, CORS, rate limiting
+- **Real-time**: Socket.IO with Redis adapter for horizontal scaling
+- **Database**: PostgreSQL with Prisma ORM
+- **Caching**: Redis for session management and room state
+- **Validation**: Zod for runtime type validation
+- **Monitoring**: Winston for logging, Prometheus metrics
+
+### Performance & Scalability Features
+- Connection pooling for database
+- Redis pub/sub for multi-instance socket communication  
+- Clustered workers using Node.js cluster module
+- Request rate limiting per IP/room
+- Memory-efficient timer state management
+- Graceful shutdown handling
+
+## Data Models
+
+### Room Model
+```typescript
+interface Room {
+  id: string; // UUID
+  name: string;
+  description?: string;
+  shareToken: string; // For public access
+  ownerId: string;
+  createdAt: Date;
+  updatedAt: Date;
+  timers: Timer[];
+}
+```
+
+### Timer Model  
+```typescript
+interface Timer {
+  id: string; // UUID
+  roomId: string;
+  title: string;
+  description?: string;
+  startTimestamp: Date;
+  endTimestamp: Date;
+  duration: number; // milliseconds
+  isActive: boolean;
+  createdAt: Date;
+}
+```
+
+## API Endpoints Design
+
+### Room Management
+- `POST /api/rooms` - Create new room
+- `GET /api/rooms/:shareToken` - Get room by share token
+- `PUT /api/rooms/:id` - Update room (owner only)
+- `DELETE /api/rooms/:id` - Delete room (owner only)
+
+### Timer Management
+- `POST /api/rooms/:roomId/timers` - Create timer
+- `PUT /api/timers/:id` - Update timer
+- `DELETE /api/timers/:id` - Delete timer
+- `POST /api/timers/:id/start` - Start timer
+- `POST /api/timers/:id/pause` - Pause timer
+- `POST /api/timers/:id/reset` - Reset timer
+
+## Socket.IO Events
+
+### Client → Server
+- `join-room`: Join room by share token
+- `leave-room`: Leave room
+- `timer-action`: Start/pause/reset timer
+
+### Server → Client
+- `room-state`: Complete room state with all timers
+- `timer-update`: Individual timer state change
+- `timer-finished`: Timer completed notification
+- `user-count`: Number of users in room
+
+## Implementation Requirements
+
+### 1. Server Structure
+```
+src/
+├── server.ts              # Main server entry
+├── app.ts                 # Express app configuration  
+├── config/
+│   ├── database.ts        # Prisma client setup
+│   ├── redis.ts           # Redis client setup
+│   └── socket.ts          # Socket.IO configuration
+├── controllers/
+│   ├── room.controller.ts
+│   └── timer.controller.ts
+├── services/
+│   ├── room.service.ts
+│   ├── timer.service.ts
+│   └── socket.service.ts
+├── middleware/
+│   ├── auth.middleware.ts
+│   ├── validation.middleware.ts
+│   └── rateLimit.middleware.ts
+├── models/
+│   └── schemas.ts         # Zod validation schemas
+├── utils/
+│   ├── logger.ts
+│   └── helpers.ts
+└── types/
+    └── index.ts           # TypeScript interfaces
+```
+
+### 2. Key Implementation Details
+
+#### Timer Logic
+- Timers store `startTimestamp` and `endTimestamp`
+- Frontend calculates remaining time using client timestamp
+- Server only validates timer state changes
+- No server-side countdown loops (memory efficient)
+
+#### Socket Room Management
+```typescript
+// Join room with share token
+socket.on('join-room', async (shareToken: string) => {
+  const room = await roomService.findByShareToken(shareToken);
+  if (room) {
+    socket.join(`room:${room.id}`);
+    socket.emit('room-state', room);
+    io.to(`room:${room.id}`).emit('user-count', getUserCount(room.id));
+  }
+});
+```
+
+#### Scalability Features
+- Redis adapter for Socket.IO clustering
+- Database connection pooling
+- Horizontal scaling support
+- Stateless server design
+
+### 3. Environment Configuration
+```env
+NODE_ENV=production
+PORT=3000
+DATABASE_URL=postgresql://...
+REDIS_URL=redis://...
+JWT_SECRET=your-secret-key
+CORS_ORIGIN=http://localhost:5173
+RATE_LIMIT_WINDOW_MS=60000
+RATE_LIMIT_MAX_REQUESTS=100
+```
+
+## Code Examples to Generate
+
+1. **Complete server setup** with clustering and graceful shutdown
+2. **Prisma schema** for PostgreSQL with optimized indexes
+3. **Socket.IO service** with Redis adapter and room management
+4. **Room controller** with full CRUD operations
+5. **Timer controller** with state management
+6. **Middleware stack** for security, validation, and rate limiting
+7. **Docker configuration** for production deployment
+8. **Testing setup** with Jest and supertest
+
+## Performance Optimizations
+
+- Use `compression` middleware for response compression
+- Implement database query optimization with proper indexes
+- Cache frequently accessed room data in Redis
+- Use `express.json({ limit: '10mb' })` with reasonable limits
+- Implement connection timeouts and keep-alive settings
+- Add Prometheus metrics for monitoring
+
+## Security Requirements
+
+- Input validation with Zod schemas
+- Rate limiting per IP and per room
+- CORS configuration for Vue.js frontend
+- Helmet for security headers
+- Share token validation for room access
+- SQL injection prevention with Prisma
+
+## Deployment Considerations
+
+- PM2 or Docker for process management  
+- nginx reverse proxy configuration
+- Health check endpoints
+- Graceful shutdown with proper cleanup
+- Environment-specific configurations
+- Monitoring and alerting setup
+
+Generate the complete implementation following these specifications, ensuring production-ready code quality with proper error handling, logging, and TypeScript types throughout.

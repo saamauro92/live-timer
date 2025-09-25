@@ -1,0 +1,397 @@
+// Enhanced Socket.IO Service with Admin/Viewer Logic
+import { Server as SocketServer, Socket } from 'socket.io';
+import { roomService } from './room.service';
+import { timerService } from './timer.service';
+import { logger } from '../utils/logger';
+
+interface SocketData {
+  userId?: string;
+  roomId?: string;
+  isAdmin?: boolean;
+}
+
+export class SocketService {
+  private io: SocketServer;
+  private roomConnections = new Map<string, Set<string>>(); // roomId -> Set of socketIds
+
+  constructor(server: any) {
+    this.io = new SocketServer(server, {
+      cors: { origin: process.env.CORS_ORIGIN }
+    });
+    this.setupEventHandlers();
+  }
+
+  private setupEventHandlers() {
+    this.io.on('connection', (socket: Socket) => {
+      logger.info(`Client connected: ${socket.id}`);
+
+      // 1. JOIN ROOM - Both admin and viewers use this
+      socket.on('join-room', async (data: { shareToken: string; userId?: string }) => {
+        try {
+          const room = await roomService.findByShareToken(data.shareToken);
+          if (!room) {
+            socket.emit('error', { message: 'Room not found' });
+            return;
+          }
+
+          const roomKey = `room:${room.id}`;
+          socket.join(roomKey);
+
+          // Store connection data
+          (socket.data as SocketData).roomId = room.id;
+          (socket.data as SocketData).userId = data.userId;
+          (socket.data as SocketData).isAdmin = data.userId === room.ownerId;
+
+          // Track connection
+          if (!this.roomConnections.has(roomKey)) {
+            this.roomConnections.set(roomKey, new Set());
+          }
+          this.roomConnections.get(roomKey)!.add(socket.id);
+
+          // Send initial room state with all timers
+          const roomWithTimers = await roomService.findByIdWithTimers(room.id);
+          socket.emit('room-state', {
+            ...roomWithTimers,
+            isAdmin: (socket.data as SocketData).isAdmin
+          });
+
+          // Broadcast user count to all room members
+          const userCount = this.roomConnections.get(roomKey)!.size;
+          this.io.to(roomKey).emit('user-count', userCount);
+
+          logger.info(`User joined room ${room.id} as ${(socket.data as SocketData).isAdmin ? 'admin' : 'viewer'}`);
+        } catch (error) {
+          logger.error('Error joining room:', error);
+          socket.emit('error', { message: 'Failed to join room' });
+        }
+      });
+
+      // 2. TIMER ACTIONS - Only admins can use this
+      socket.on('timer-action', async (data: { timerId: string; action: 'start' | 'pause' | 'reset' }) => {
+        try {
+          const socketData = socket.data as SocketData;
+          
+          // Permission check: Only admin can control timers
+          if (!socketData.isAdmin) {
+            socket.emit('error', { message: 'Unauthorized: Only room admin can control timers' });
+            return;
+          }
+
+          // Validate timer belongs to user's room
+          const timer = await timerService.findById(data.timerId);
+          if (!timer || timer.roomId !== socketData.roomId) {
+            socket.emit('error', { message: 'Timer not found or unauthorized' });
+            return;
+          }
+
+          // Update timer state
+          const updatedTimer = await timerService.updateTimerState(data.timerId, data.action);
+          
+          if (updatedTimer) {
+            // Broadcast to ALL users in the room (admin + viewers)
+            const roomKey = `room:${socketData.roomId}`;
+            this.io.to(roomKey).emit('timer-update', updatedTimer);
+            
+            logger.info(`Timer ${data.timerId} ${data.action} by admin in room ${socketData.roomId}`);
+
+            // If timer finished, send special event
+            if (data.action === 'start' && this.isTimerExpired(updatedTimer)) {
+              setTimeout(() => {
+                this.io.to(roomKey).emit('timer-finished', {
+                  timerId: updatedTimer.id,
+                  title: updatedTimer.title
+                });
+              }, updatedTimer.endTimestamp.getTime() - Date.now());
+            }
+          }
+        } catch (error) {
+          logger.error('Error updating timer:', error);
+          socket.emit('error', { message: 'Failed to update timer' });
+        }
+      });
+
+      // 3. ADMIN CREATES NEW TIMER - Real-time addition
+      socket.on('create-timer', async (timerData: { title: string; description?: string; duration: number }) => {
+        try {
+          const socketData = socket.data as SocketData;
+          
+          if (!socketData.isAdmin || !socketData.roomId) {
+            socket.emit('error', { message: 'Unauthorized' });
+            return;
+          }
+
+          const newTimer = await timerService.create({
+            roomId: socketData.roomId,
+            ...timerData
+          });
+
+          // Broadcast new timer to all room members
+          const roomKey = `room:${socketData.roomId}`;
+          this.io.to(roomKey).emit('timer-created', newTimer);
+          
+          logger.info(`New timer created in room ${socketData.roomId}`);
+        } catch (error) {
+          logger.error('Error creating timer:', error);
+          socket.emit('error', { message: 'Failed to create timer' });
+        }
+      });
+
+      // 4. ADMIN DELETES TIMER - Real-time removal
+      socket.on('delete-timer', async (data: { timerId: string }) => {
+        try {
+          const socketData = socket.data as SocketData;
+          
+          if (!socketData.isAdmin) {
+            socket.emit('error', { message: 'Unauthorized' });
+            return;
+          }
+
+          const deleted = await timerService.delete(data.timerId, socketData.roomId!);
+          
+          if (deleted) {
+            const roomKey = `room:${socketData.roomId}`;
+            this.io.to(roomKey).emit('timer-deleted', { timerId: data.timerId });
+          }
+        } catch (error) {
+          logger.error('Error deleting timer:', error);
+          socket.emit('error', { message: 'Failed to delete timer' });
+        }
+      });
+
+      // 5. HEARTBEAT - Keep connection alive and sync state
+      socket.on('heartbeat', async () => {
+        const socketData = socket.data as SocketData;
+        if (socketData.roomId) {
+          // Send current room state to ensure sync
+          const room = await roomService.findByIdWithTimers(socketData.roomId);
+          socket.emit('room-sync', room);
+        }
+      });
+
+      // 6. DISCONNECT HANDLER
+      socket.on('disconnect', () => {
+        const socketData = socket.data as SocketData;
+        
+        if (socketData.roomId) {
+          const roomKey = `room:${socketData.roomId}`;
+          const connections = this.roomConnections.get(roomKey);
+          
+          if (connections) {
+            connections.delete(socket.id);
+            
+            // Update user count
+            this.io.to(roomKey).emit('user-count', connections.size);
+            
+            // Clean up empty rooms
+            if (connections.size === 0) {
+              this.roomConnections.delete(roomKey);
+            }
+          }
+        }
+        
+        logger.info(`Client disconnected: ${socket.id}`);
+      });
+    });
+  }
+
+  // Helper method to check if timer is expired
+  private isTimerExpired(timer: any): boolean {
+    return timer.endTimestamp.getTime() <= Date.now();
+  }
+
+  // Public method to emit to specific room (for external use)
+  public emitToRoom(roomId: string, event: string, data: any) {
+    this.io.to(`room:${roomId}`).emit(event, data);
+  }
+
+  // Get room statistics
+  public getRoomStats(roomId: string) {
+    const roomKey = `room:${roomId}`;
+    const connections = this.roomConnections.get(roomKey);
+    return {
+      connectedUsers: connections ? connections.size : 0,
+      isActive: connections && connections.size > 0
+    };
+  }
+}
+
+// Vue.js Frontend Implementation for Admin
+// components/AdminTimerControl.vue
+/*
+<template>
+  <div class="admin-panel">
+    <h2>{{ room.name }} - Admin Control</h2>
+    
+    <!-- Timer Creation -->
+    <div class="create-timer">
+      <input v-model="newTimer.title" placeholder="Timer title" />
+      <input v-model="newTimer.duration" type="number" placeholder="Minutes" />
+      <button @click="createTimer">Add Timer</button>
+    </div>
+
+    <!-- Timer Controls -->
+    <div v-for="timer in timers" :key="timer.id" class="timer-control">
+      <div class="timer-info">
+        <h3>{{ timer.title }}</h3>
+        <div class="countdown" :class="{ active: timer.isActive, expired: isExpired(timer) }">
+          {{ formatTime(getRemainingTime(timer)) }}
+        </div>
+      </div>
+      
+      <div class="controls">
+        <button 
+          @click="controlTimer(timer.id, 'start')" 
+          :disabled="timer.isActive"
+          class="start-btn"
+        >
+          Start
+        </button>
+        <button 
+          @click="controlTimer(timer.id, 'pause')" 
+          :disabled="!timer.isActive"
+          class="pause-btn"
+        >
+          Pause
+        </button>
+        <button 
+          @click="controlTimer(timer.id, 'reset')"
+          class="reset-btn"
+        >
+          Reset
+        </button>
+        <button 
+          @click="deleteTimer(timer.id)"
+          class="delete-btn"
+        >
+          Delete
+        </button>
+      </div>
+    </div>
+
+    <div class="room-info">
+      <p>Room Link: {{ shareLink }}</p>
+      <p>Viewers Online: {{ userCount }}</p>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, reactive, onMounted, onUnmounted } from 'vue';
+import { io } from 'socket.io-client';
+
+const socket = io('http://localhost:3000');
+const room = ref({});
+const timers = ref([]);
+const userCount = ref(0);
+const intervals = new Map();
+
+const newTimer = reactive({
+  title: '',
+  duration: 10 // minutes
+});
+
+// Timer control functions
+function controlTimer(timerId, action) {
+  socket.emit('timer-action', { timerId, action });
+}
+
+function createTimer() {
+  if (newTimer.title && newTimer.duration) {
+    socket.emit('create-timer', {
+      title: newTimer.title,
+      duration: newTimer.duration * 60 * 1000 // convert to milliseconds
+    });
+    newTimer.title = '';
+    newTimer.duration = 10;
+  }
+}
+
+function deleteTimer(timerId) {
+  socket.emit('delete-timer', { timerId });
+}
+
+// Time calculation functions
+function getRemainingTime(timer) {
+  if (!timer.isActive) return timer.duration;
+  
+  const now = Date.now();
+  const end = new Date(timer.endTimestamp).getTime();
+  return Math.max(0, end - now);
+}
+
+function formatTime(ms) {
+  const minutes = Math.floor(ms / 60000);
+  const seconds = Math.floor((ms % 60000) / 1000);
+  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
+
+function isExpired(timer) {
+  return timer.isActive && getRemainingTime(timer) === 0;
+}
+
+// Socket event handlers
+socket.on('room-state', (roomData) => {
+  room.value = roomData;
+  timers.value = roomData.timers;
+  startCountdownIntervals();
+});
+
+socket.on('timer-update', (updatedTimer) => {
+  const index = timers.value.findIndex(t => t.id === updatedTimer.id);
+  if (index !== -1) {
+    timers.value[index] = updatedTimer;
+  }
+});
+
+socket.on('timer-created', (newTimer) => {
+  timers.value.push(newTimer);
+});
+
+socket.on('timer-deleted', ({ timerId }) => {
+  timers.value = timers.value.filter(t => t.id !== timerId);
+});
+
+socket.on('user-count', (count) => {
+  userCount.value = count;
+});
+
+socket.on('timer-finished', ({ timerId, title }) => {
+  // Show notification that timer finished
+  alert(`Timer "${title}" has finished!`);
+});
+
+// Start countdown intervals for active timers
+function startCountdownIntervals() {
+  // Clear existing intervals
+  intervals.forEach(interval => clearInterval(interval));
+  intervals.clear();
+  
+  // Start new intervals for active timers
+  timers.value.forEach(timer => {
+    if (timer.isActive) {
+      const interval = setInterval(() => {
+        // Force reactivity update
+        timers.value = [...timers.value];
+      }, 1000);
+      intervals.set(timer.id, interval);
+    }
+  });
+}
+
+onMounted(() => {
+  const shareToken = window.location.pathname.split('/').pop();
+  const userId = localStorage.getItem('userId') || 'admin-user-id';
+  
+  socket.emit('join-room', { shareToken, userId });
+});
+
+onUnmounted(() => {
+  intervals.forEach(interval => clearInterval(interval));
+  socket.disconnect();
+});
+
+const shareLink = computed(() => {
+  return `${window.location.origin}/room/${room.value.shareToken}`;
+});
+</script>
+*/

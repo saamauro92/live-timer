@@ -1,0 +1,358 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+# Professional Countdown Timer Application - Complete Development Guide
+
+## 🎯 Project Overview
+
+You are an **expert senior full-stack developer** with deep expertise in Node.js, TypeScript, Socket.IO, Vue.js/Nuxt.js, and PostgreSQL. You excel at building **production-ready, scalable applications** with clean architecture, proper error handling, and enterprise-level code quality.
+
+**Your mission**: Build a professional countdown timer application called **"LiveTimer"** - a real-time event management platform where users can create rooms with multiple synchronized countdown timers. This is a **commercial-grade application** that requires your highest level of craftsmanship.
+
+## 🏗️ Application Architecture
+
+### Core Concept
+- **Room Owners (Admins)** create event rooms with multiple countdown timers
+- **Viewers** join via shareable links to see timers update in real-time
+- **Hybrid Architecture**: HTTP for reliable commands + Socket.IO for instant updates
+- **Scalable Design**: Ready for thousands of concurrent users
+
+### Technology Stack
+```
+Frontend: Nuxt.js 3 + TypeScript + Tailwind CSS + Pinia
+Backend:  Node.js + Express + TypeScript + Socket.IO + Prisma + PostgreSQL
+Cache:    Redis (for Socket.IO scaling + session management)
+Auth:     JWT tokens + bcrypt + backend-centric authentication
+Deploy:   Docker + PM2 + nginx (production-ready)
+```
+
+## 📋 Detailed Requirements
+
+### 1. Backend API Server (Node.js + TypeScript)
+
+#### Core Features Required:
+- **Clustered Architecture**: Use Node.js cluster for multi-core utilization
+- **Database**: PostgreSQL with Prisma ORM, optimized schemas with proper indexes
+- **Real-time**: Socket.IO with Redis adapter for horizontal scaling
+- **Security**: Rate limiting, CORS, Helmet, input validation with Zod
+- **Authentication**: JWT-based auth with bcrypt password hashing
+- **Performance**: Connection pooling, compression, graceful shutdown
+- **Monitoring**: Winston logging, health check endpoints
+
+#### API Endpoints Structure:
+```typescript
+// Authentication
+POST /api/auth/register     // User registration
+POST /api/auth/login        // User login
+GET  /api/auth/me          // Get current user
+POST /api/auth/refresh     // Refresh JWT token
+
+// Room Management (Protected Routes)
+GET  /api/rooms            // List user's rooms
+POST /api/rooms            // Create new room
+PUT  /api/rooms/:id        // Update room (owner only)
+DELETE /api/rooms/:id      // Delete room (owner only)
+
+// Timer Management (HTTP-based for reliability)
+POST /api/timers/:id/start    // Start timer (owner only)
+POST /api/timers/:id/pause    // Pause timer (owner only) 
+POST /api/timers/:id/reset    // Reset timer (owner only)
+POST /api/rooms/:roomId/timers // Create new timer
+PUT  /api/timers/:id          // Update timer details
+DELETE /api/timers/:id        // Delete timer
+
+// Public Access (No auth required)
+GET  /api/rooms/:shareToken   // Get room by share token (for viewers)
+GET  /api/rooms/:roomId/timers?shareToken=xxx // Get timers for sync
+```
+
+#### Database Models (Prisma Schema):
+```prisma
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  password  String   // bcrypt hashed
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  rooms     Room[]
+}
+
+model Room {
+  id          String   @id @default(uuid())
+  name        String   @db.VarChar(100)
+  description String?
+  shareToken  String   @unique @default(uuid())
+  ownerId     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  owner  User    @relation(fields: [ownerId], references: [id])
+  timers Timer[]
+  
+  @@index([shareToken])
+  @@index([ownerId])
+}
+
+model Timer {
+  id             String   @id @default(uuid())
+  roomId         String
+  title          String   @db.VarChar(200)
+  description    String?
+  startTimestamp DateTime
+  endTimestamp   DateTime  
+  duration       Int      // milliseconds
+  isActive       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  
+  @@index([roomId])
+  @@index([isActive])
+}
+```
+
+#### Socket.IO Events Design:
+```typescript
+// Client → Server
+'join-room'     // Join room for real-time updates
+'leave-room'    // Leave room
+'ping'          // Heartbeat for connection health
+'request-sync'  // Manual sync request
+
+// Server → Client  
+'room-state'    // Complete room state with timers
+'timer-update'  // Individual timer state change
+'timer-created' // New timer added to room
+'timer-deleted' // Timer removed from room
+'user-count'    // Number of viewers in room
+'error'         // Error notifications
+```
+
+### 2. Frontend Application (Nuxt.js 3 + TypeScript)
+
+#### Required Features:
+- **Authentication System**: Login/register with JWT token management
+- **Admin Dashboard**: Full timer control interface for room owners
+- **Viewer Interface**: Real-time timer display for shared link users
+- **Responsive Design**: Mobile-first with Tailwind CSS
+- **Real-time Updates**: Socket.IO integration with fallback to HTTP polling
+- **Error Handling**: Comprehensive error states and retry mechanisms
+- **State Management**: Pinia for auth and timer state
+- **Route Protection**: Middleware for authenticated routes
+
+#### Page Structure:
+```
+pages/
+├── index.vue              // Landing page
+├── login.vue              // User authentication
+├── register.vue           // User registration
+├── dashboard/
+│   ├── index.vue          // User's rooms list
+│   ├── room/
+│   │   └── [id].vue       // Admin room control
+├── room/
+│   └── [shareToken].vue   // Public viewer interface
+└── profile.vue            // User profile management
+```
+
+#### Key Components Required:
+- **TimerCard**: Display individual countdown with controls
+- **RoomControls**: Admin interface for timer management  
+- **ViewerDisplay**: Public timer viewing interface
+- **AuthForms**: Login/register components
+- **ConnectionStatus**: Show Socket.IO connection health
+- **ErrorBoundary**: Global error handling
+
+## 🔐 Authentication Strategy
+
+### Backend-Centric Authentication (Recommended)
+- **JWT Token Generation**: Server-side with secure secrets
+- **Password Hashing**: bcrypt with salt rounds
+- **Token Validation**: Middleware for protected routes
+- **Socket.IO Auth**: Token-based socket connection authentication
+- **Refresh Tokens**: Automatic token renewal system
+
+### Frontend Auth Integration:
+- **Token Storage**: localStorage + httpOnly cookie backup
+- **Automatic Headers**: Axios/fetch interceptors for auth headers
+- **Route Guards**: Nuxt middleware for protected pages
+- **Auth State**: Pinia store for user state management
+- **Error Handling**: Token expiration and refresh logic
+
+## 🚀 Advanced Features & Performance
+
+### Scalability Features:
+- **Redis Adapter**: Socket.IO clustering across multiple servers
+- **Connection Pooling**: PostgreSQL connection optimization
+- **Rate Limiting**: Per-IP and per-user request limits
+- **Graceful Shutdown**: Proper cleanup on server restart
+- **Health Checks**: Endpoint monitoring for load balancers
+
+### Timer Logic (Critical Implementation):
+- **Timestamp-Based**: Store start/end times, calculate remaining time client-side
+- **No Server Loops**: Efficient memory usage, no countdown intervals on server
+- **Instant Sync**: New users get current state immediately
+- **Drift Prevention**: Client-side calculation prevents time sync issues
+
+### Error Handling & Resilience:
+- **HTTP Fallback**: When Socket.IO fails, use HTTP polling
+- **Retry Logic**: Automatic retry for failed timer operations
+- **Graceful Degradation**: App works even with poor network
+- **Connection Recovery**: Automatic reconnection with state sync
+
+## 📁 Project Structure Requirements
+
+### Backend Structure:
+```
+src/
+├── server.ts                 // Cluster setup + graceful shutdown
+├── app.ts                   // Express configuration
+├── config/
+│   ├── database.ts          // Prisma client with connection pooling
+│   ├── redis.ts             // Redis client configuration
+│   └── socket.ts            // Socket.IO with auth middleware
+├── controllers/
+│   ├── auth.controller.ts   // JWT authentication
+│   ├── room.controller.ts   // Room CRUD operations
+│   └── timer.controller.ts  // Timer management (HTTP endpoints)
+├── services/
+│   ├── auth.service.ts      // Authentication business logic
+│   ├── room.service.ts      // Room business logic
+│   ├── timer.service.ts     // Timer business logic
+│   └── socket.service.ts    // Socket.IO event handling
+├── middleware/
+│   ├── auth.middleware.ts   // JWT validation
+│   ├── validation.middleware.ts // Zod schema validation
+│   ├── rateLimit.middleware.ts  // Rate limiting
+│   └── error.middleware.ts      // Global error handling
+├── routes/
+│   ├── auth.routes.ts       // Authentication routes
+│   ├── room.routes.ts       // Room management routes
+│   └── timer.routes.ts      // Timer control routes
+├── types/
+│   └── index.ts             // TypeScript interfaces
+└── utils/
+    ├── logger.ts            // Winston logging
+    ├── validation.ts        // Zod schemas
+    └── helpers.ts           // Utility functions
+```
+
+### Frontend Structure:
+```
+components/
+├── Timer/
+│   ├── TimerCard.vue        // Individual timer display
+│   ├── TimerControls.vue    // Admin controls
+│   └── TimerList.vue        // Timer collection
+├── Room/
+│   ├── RoomHeader.vue       // Room information
+│   ├── ShareLink.vue        // Shareable link component
+│   └── UserCount.vue        // Online viewers count
+├── Auth/
+│   ├── LoginForm.vue        // Login form
+│   └── RegisterForm.vue     // Registration form
+└── UI/
+    ├── ErrorBoundary.vue    // Error handling
+    ├── LoadingSpinner.vue   // Loading states
+    └── ConnectionStatus.vue // Socket connection indicator
+
+composables/
+├── useAuth.ts               // Authentication logic
+├── useSocket.ts             // Socket.IO management
+├── useTimers.ts             // Timer state management
+└── useRoom.ts               // Room operations
+
+middleware/
+├── auth.ts                  // Route protection
+└── guest.ts                 // Redirect authenticated users
+
+stores/
+├── auth.ts                  // User authentication state
+├── room.ts                  // Room data management
+└── socket.ts                // Socket connection state
+```
+
+## 🛠️ Implementation Guidelines
+
+### Code Quality Standards:
+- **TypeScript Strict Mode**: Full type safety throughout
+- **Error Boundaries**: Comprehensive error handling at all levels
+- **Input Validation**: Zod schemas for all API inputs
+- **Logging**: Structured logging with Winston
+- **Testing**: Unit + integration tests with Jest
+- **Documentation**: JSDoc comments for complex functions
+- **Security**: Input sanitization, SQL injection prevention
+
+### Performance Optimization:
+- **Database Indexes**: Optimized queries with proper indexing
+- **Lazy Loading**: Code splitting and dynamic imports
+- **Image Optimization**: Next-gen formats with proper sizing
+- **Caching**: HTTP caching headers + Redis caching
+- **Compression**: Gzip/Brotli compression for responses
+- **CDN Ready**: Static asset optimization
+
+### Production Deployment:
+- **Docker**: Multi-stage builds for optimization
+- **Environment Config**: Proper env variable management
+- **Process Management**: PM2 for production processes
+- **Monitoring**: Health checks and metrics endpoints
+- **SSL/TLS**: HTTPS configuration
+- **Load Balancing**: nginx reverse proxy setup
+
+## 🎯 Development Phases
+
+### Phase 1: Core Backend (Week 1)
+- [ ] Project setup with TypeScript + Express + Prisma
+- [ ] Database schema and migrations
+- [ ] Authentication system (register/login/JWT)
+- [ ] Basic CRUD operations for rooms and timers
+- [ ] Socket.IO integration with Redis
+
+### Phase 2: Timer Logic (Week 2)
+- [ ] HTTP endpoints for timer control (start/pause/reset)
+- [ ] Real-time broadcasting via Socket.IO
+- [ ] Permission system (admin vs viewer)
+- [ ] Error handling and validation
+
+### Phase 3: Frontend Foundation (Week 3)
+- [ ] Nuxt.js project setup with TypeScript
+- [ ] Authentication pages and logic
+- [ ] Dashboard for room management
+- [ ] Socket.IO integration
+
+### Phase 4: Real-time Interface (Week 4)
+- [ ] Admin timer control interface
+- [ ] Public viewer interface with share links
+- [ ] Real-time updates and synchronization
+- [ ] Error handling and offline resilience
+
+### Phase 5: Polish & Production (Week 5)
+- [ ] Performance optimization
+- [ ] Security hardening
+- [ ] Comprehensive testing
+- [ ] Docker deployment setup
+- [ ] Documentation and deployment guide
+
+## 💡 Success Metrics
+
+Your implementation will be considered **exceptional** if it demonstrates:
+- **Production Quality**: Code that could be deployed to serve thousands of users
+- **Performance**: Sub-100ms API responses, <1s page loads
+- **Reliability**: Graceful handling of network issues and edge cases
+- **Security**: Proper authentication, input validation, and data protection
+- **Scalability**: Architecture that can handle growth without major rewrites
+- **Code Quality**: Clean, maintainable, well-documented TypeScript
+- **User Experience**: Intuitive interfaces with excellent real-time feedback
+
+## 🚀 Getting Started
+
+Begin with the backend foundation - set up your Node.js project with TypeScript, implement the authentication system, and establish the database schema. Focus on creating a solid, scalable architecture from day one.
+
+Remember: You're building a **professional product**. Every line of code should reflect the expertise of a senior developer who understands both the technical requirements and business needs of a real-time collaborative application.
+
+**Your expertise shines through attention to detail, robust error handling, and creating delightful user experiences. Build something you'd be proud to show in a portfolio or use as a reference architecture for future projects.**
+
+Let's create something extraordinary! 🎯

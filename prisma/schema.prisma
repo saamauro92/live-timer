@@ -1,0 +1,128 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User authentication models (matching frontend Better Auth schema)
+model User {
+  id                String    @id @default(uuid()) @db.Uuid
+  name              String
+  email             String    @unique
+  emailVerified     Boolean   @default(false)
+  image             String?
+  createdAt         DateTime  @default(now()) @db.Timestamptz
+  updatedAt         DateTime  @updatedAt @db.Timestamptz
+  role              String?
+  banned            Boolean   @default(false)
+  banReason         String?
+  banExpires        DateTime? @db.Timestamptz
+  stripeCustomerId  String?
+  polarCustomerId   String?
+  
+  accounts Account[]
+  rooms    Room[]
+  
+  @@map("user")
+  @@index([email])
+  @@index([createdAt])
+}
+
+model Account {
+  id                      String    @id @default(uuid()) @db.Uuid
+  accountId               String
+  providerId              String
+  userId                  String    @db.Uuid
+  accessToken             String?
+  refreshToken            String?
+  idToken                 String?
+  accessTokenExpiresAt    DateTime? @db.Timestamptz
+  refreshTokenExpiresAt   DateTime? @db.Timestamptz
+  scope                  String?
+  password               String?
+  createdAt              DateTime  @default(now()) @db.Timestamptz
+  updatedAt              DateTime  @updatedAt @db.Timestamptz
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("account")
+  @@index([userId])
+  @@index([accountId])
+  @@index([providerId])
+}
+
+model Verification {
+  id          String    @id @default(uuid()) @db.Uuid
+  identifier  String
+  value       String
+  expiresAt   DateTime  @db.Timestamptz
+  createdAt   DateTime  @default(now()) @db.Timestamptz
+  updatedAt   DateTime  @updatedAt @db.Timestamptz
+  
+  @@map("verification")
+  @@index([identifier])
+  @@index([expiresAt])
+}
+
+model Subscription {
+  id                    String    @id @default(uuid()) @db.Uuid
+  plan                  String
+  referenceId           String
+  stripeCustomerId      String?
+  stripeSubscriptionId  String?
+  status                String    @default("incomplete")
+  periodStart           DateTime? @db.Timestamptz
+  periodEnd             DateTime? @db.Timestamptz
+  trialStart            DateTime? @db.Timestamptz
+  trialEnd              DateTime? @db.Timestamptz
+  cancelAtPeriodEnd     Boolean   @default(false)
+  seats                 Int?
+  
+  @@map("subscription")
+  @@index([referenceId])
+  @@index([stripeCustomerId])
+}
+
+// Timer application models
+model Room {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @db.VarChar(100)
+  description String?  @db.Text
+  shareToken  String   @unique @default(uuid()) @db.Uuid
+  ownerId     String   @db.Uuid
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  updatedAt   DateTime @updatedAt @db.Timestamptz
+  
+  owner  User    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  timers Timer[]
+  
+  @@map("rooms")
+  @@index([shareToken])
+  @@index([ownerId])
+  @@index([createdAt])
+}
+
+model Timer {
+  id             String   @id @default(uuid()) @db.Uuid
+  roomId         String   @db.Uuid
+  title          String   @db.VarChar(200)
+  description    String?  @db.Text
+  startTimestamp DateTime @db.Timestamptz
+  endTimestamp   DateTime @db.Timestamptz
+  duration       Int      // milliseconds
+  isActive       Boolean  @default(false)
+  createdAt      DateTime @default(now()) @db.Timestamptz
+  
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  
+  @@map("timers")
+  @@index([roomId])
+  @@index([isActive])
+  @@index([createdAt])
+}
