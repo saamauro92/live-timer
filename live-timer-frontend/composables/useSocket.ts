@@ -1,6 +1,6 @@
 export const useSocket = () => {
   const config = useRuntimeConfig()
-  const socket = ref(null)
+  const socket = shallowRef(null)
   const isConnected = ref(false)
   
   const connect = async () => {
@@ -113,7 +113,7 @@ export const useSocket = () => {
   })
   
   return {
-    socket: readonly(socket),
+    socket,
     isConnected: readonly(isConnected),
     connect,
     disconnect,

@@ -19,7 +19,12 @@ export class SocketService {
     logger.info('Initializing Socket.IO server...');
     this.io = new SocketServer(server, {
       cors: {
-        origin: process.env.CORS_ORIGIN || "http://localhost:3000",
+        origin: [
+          "http://localhost:3000",
+          "http://localhost:5173", 
+          "http://localhost:3001",
+          process.env.CORS_ORIGIN || "http://localhost:3000"
+        ],
         methods: ['GET', 'POST'],
         credentials: true
       },
@@ -134,10 +139,24 @@ export class SocketService {
 
           const roomKey = `room:${room.id}`;
           logger.info(`Socket ${socket.id} joining room: ${roomKey} (room ID: ${room.id})`);
+          
+          // Leave any previous rooms first
+          const socketData = socket.data as SocketData;
+          if (socketData.roomId) {
+            const previousRoomKey = `room:${socketData.roomId}`;
+            socket.leave(previousRoomKey);
+            const previousConnections = this.roomConnections.get(previousRoomKey);
+            if (previousConnections) {
+              previousConnections.delete(socket.id);
+              if (previousConnections.size === 0) {
+                this.roomConnections.delete(previousRoomKey);
+              }
+            }
+          }
+          
           socket.join(roomKey);
 
           // Get user ID from authenticated socket data or from request
-          const socketData = socket.data as SocketData;
           const userId = socketData.user?.id || data.userId;
 
           // Store connection data
@@ -161,7 +180,16 @@ export class SocketService {
           const userCount = this.roomConnections.get(roomKey)!.size;
           this.io.to(roomKey).emit('user-count', userCount);
 
+          // Send a test event to verify the connection works
+          socket.emit('test-event', {
+            message: 'Successfully joined room',
+            roomId: room.id,
+            shareToken: data.shareToken,
+            timestamp: new Date().toISOString()
+          });
+
           logger.info(`User joined room ${room.id} as ${socketData.isAdmin ? 'admin' : 'viewer'}`);
+          logger.info(`Room ${roomKey} now has ${userCount} connected users`);
         } catch (error) {
           logger.error('Error joining room:', error);
           socket.emit('error', { message: 'Failed to join room' });

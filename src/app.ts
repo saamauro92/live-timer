@@ -32,7 +32,12 @@ export const createApp = (): express.Application => {
 
   // CORS configuration
   app.use(cors({
-    origin: process.env['CORS_ORIGIN'] || "http://localhost:3000",
+    origin: [
+      "http://localhost:3000",
+      "http://localhost:5173",
+      "http://localhost:3001",
+      process.env['CORS_ORIGIN'] || "http://localhost:3000"
+    ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key']
@@ -131,6 +136,149 @@ export const createApp = (): express.Application => {
       });
     }
   });
+
+  // Test socket connection by shareToken
+  app.post('/api/debug/test-socket-share/:shareToken', async (req, res) => {
+    try {
+      const { shareToken } = req.params;
+      const socketService = (global as any).socketService;
+      
+      if (!socketService) {
+        return res.status(500).json({
+          success: false,
+          message: 'Socket service not available'
+        });
+      }
+      
+      // Find room by shareToken
+      const { roomService } = require('./services/room.service');
+      const room = await roomService.findByShareTokenWithTimers(shareToken);
+      
+      if (!room) {
+        return res.status(404).json({
+          success: false,
+          message: 'Room not found for shareToken'
+        });
+      }
+      
+      // Test broadcast to room
+      socketService.emitToRoom(room.id, 'test-event', {
+        message: 'Test broadcast from backend via shareToken',
+        timestamp: new Date().toISOString(),
+        roomId: room.id,
+        shareToken: shareToken
+      });
+      
+      res.json({
+        success: true,
+        message: `Test broadcast sent to room ${room.id} via shareToken ${shareToken}`,
+        roomId: room.id,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error testing socket service with shareToken',
+        error: error.message
+      });
+    }
+  });
+
+  // Test timer events by shareToken
+  app.post('/api/debug/test-timer-events/:shareToken', async (req, res) => {
+    try {
+      const { shareToken } = req.params;
+      const { action } = req.body; // 'start', 'pause', 'stop'
+      const socketService = (global as any).socketService;
+      
+      if (!socketService) {
+        return res.status(500).json({
+          success: false,
+          message: 'Socket service not available'
+        });
+      }
+      
+      // Find room by shareToken
+      const { roomService } = require('./services/room.service');
+      const room = await roomService.findByShareTokenWithTimers(shareToken);
+      
+      if (!room) {
+        return res.status(404).json({
+          success: false,
+          message: 'Room not found for shareToken'
+        });
+      }
+      
+      // Get the first timer from the room
+      const timer = room.timers?.[0];
+      if (!timer) {
+        return res.status(404).json({
+          success: false,
+          message: 'No timers found in room'
+        });
+      }
+      
+      // Simulate timer events
+      const now = new Date();
+      const endTime = new Date(now.getTime() + (timer.duration || 300000)); // 5 minutes default
+      
+      let eventData;
+      switch (action) {
+        case 'start':
+          eventData = {
+            timerId: timer.id,
+            roomId: room.id,
+            isActive: true,
+            endTimestamp: endTime,
+            remainingTime: Math.floor(timer.duration / 1000)
+          };
+          socketService.emitToRoom(room.id, 'timer-started', eventData);
+          break;
+        case 'pause':
+          eventData = {
+            timerId: timer.id,
+            roomId: room.id,
+            isActive: false,
+            isPaused: true,
+            endTimestamp: endTime,
+            remainingTime: Math.floor(timer.duration / 1000)
+          };
+          socketService.emitToRoom(room.id, 'timer-paused', eventData);
+          break;
+        case 'stop':
+          eventData = {
+            timerId: timer.id,
+            roomId: room.id,
+            isActive: false,
+            isPaused: false,
+            endTimestamp: endTime,
+            remainingTime: 0
+          };
+          socketService.emitToRoom(room.id, 'timer-stopped', eventData);
+          break;
+        default:
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid action. Use: start, pause, or stop'
+          });
+      }
+      
+      res.json({
+        success: true,
+        message: `Timer ${action} event sent to room ${room.id}`,
+        roomId: room.id,
+        timerId: timer.id,
+        action: action,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error testing timer events',
+        error: error.message
+      });
+    }
+  });
   
   // Timer control routes (with specific rate limiting) - require authentication
   app.post('/api/timers/:id/start', timerControlLimit, authenticateToken, timerController.startTimer);
@@ -164,6 +312,25 @@ export const createApp = (): express.Application => {
         message: 'Failed to get socket stats'
       });
     }
+  });
+
+  // CORS debug endpoint
+  app.get('/api/debug/cors', (req, res) => {
+    res.json({
+      success: true,
+      data: {
+        origin: req.headers.origin,
+        userAgent: req.headers['user-agent'],
+        corsOrigin: process.env.CORS_ORIGIN,
+        allowedOrigins: [
+          "http://localhost:3000",
+          "http://localhost:5173",
+          "http://localhost:3001",
+          process.env.CORS_ORIGIN || "http://localhost:3000"
+        ],
+        timestamp: new Date().toISOString()
+      }
+    });
   });
 
   // 404 handler

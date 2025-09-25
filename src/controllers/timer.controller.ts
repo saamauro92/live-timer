@@ -52,10 +52,17 @@ export class TimerController {
       // Broadcast to all room members via Socket.IO
       try {
         const socketService = (global as any).socketService;
-        logger.info(`Attempting to broadcast timer start for room ${timer.roomId}`);
+        logger.info(`=== TIMER START BROADCAST DEBUG ===`);
+        logger.info(`Timer ID: ${id}`);
+        logger.info(`Room ID: ${timer.roomId}`);
+        logger.info(`User ID: ${userId}`);
         logger.info(`Socket service available: ${!!socketService}`);
         
         if (socketService) {
+          // Get room stats before broadcasting
+          const roomStats = socketService.getRoomStats(timer.roomId);
+          logger.info(`Room ${timer.roomId} stats:`, roomStats);
+          
           const broadcastData = {
             timerId: updatedTimer.id,
             roomId: timer.roomId,
@@ -70,6 +77,18 @@ export class TimerController {
           // Also emit a general timer update
           logger.info(`Broadcasting timer-update with timer:`, updatedTimer);
           socketService.emitToRoom(timer.roomId, 'timer-update', updatedTimer);
+          
+          // Send a test event to verify connectivity
+          socketService.emitToRoom(timer.roomId, 'test-event', {
+            message: 'Timer started - test broadcast',
+            timerId: updatedTimer.id,
+            roomId: timer.roomId,
+            timestamp: new Date().toISOString()
+          });
+          
+          // Get room stats after broadcasting
+          const roomStatsAfter = socketService.getRoomStats(timer.roomId);
+          logger.info(`Room ${timer.roomId} stats after broadcast:`, roomStatsAfter);
           
           logger.info(`Timer ${id} started and broadcasted to room ${timer.roomId}`);
         } else {
@@ -133,25 +152,42 @@ export class TimerController {
       // Broadcast to all room members via Socket.IO
       try {
         const socketService = (global as any).socketService;
+        logger.info(`Attempting to broadcast timer pause for room ${timer.roomId}`);
+        logger.info(`Socket service available: ${!!socketService}`);
+        
         if (socketService) {
-          socketService.emitToRoom(timer.roomId, 'timer-paused', {
+          const broadcastData = {
             timerId: updatedTimer.id,
             roomId: timer.roomId,
             isActive: updatedTimer.isActive,
             isPaused: !updatedTimer.isActive,
             endTimestamp: updatedTimer.endTimestamp,
             remainingTime: Math.max(0, Math.floor((new Date(updatedTimer.endTimestamp).getTime() - new Date().getTime()) / 1000))
-          });
+          };
+          
+          logger.info(`Broadcasting timer-paused with data:`, broadcastData);
+          socketService.emitToRoom(timer.roomId, 'timer-paused', broadcastData);
           
           // Also emit a general timer update
+          logger.info(`Broadcasting timer-update with timer:`, updatedTimer);
           socketService.emitToRoom(timer.roomId, 'timer-update', updatedTimer);
+          
+          // Send a test event to verify connectivity
+          socketService.emitToRoom(timer.roomId, 'test-event', {
+            message: 'Timer paused - test broadcast',
+            timerId: updatedTimer.id,
+            roomId: timer.roomId,
+            timestamp: new Date().toISOString()
+          });
           
           logger.info(`Timer ${id} paused and broadcasted to room ${timer.roomId}`);
         } else {
-          logger.warn('Socket service not available for timer broadcast');
+          logger.error('Socket service not available for timer broadcast - this is a critical issue!');
+          logger.error('Global socket service:', (global as any).socketService);
         }
       } catch (socketError) {
         logger.error('Error broadcasting timer pause:', socketError);
+        logger.error('Socket error details:', socketError.message, socketError.stack);
       }
       
       logger.info(`Timer ${id} paused by user ${userId}`);
@@ -206,25 +242,42 @@ export class TimerController {
       // Broadcast to all room members via Socket.IO
       try {
         const socketService = (global as any).socketService;
+        logger.info(`Attempting to broadcast timer reset for room ${timer.roomId}`);
+        logger.info(`Socket service available: ${!!socketService}`);
+        
         if (socketService) {
-          socketService.emitToRoom(timer.roomId, 'timer-stopped', {
+          const broadcastData = {
             timerId: updatedTimer.id,
             roomId: timer.roomId,
             isActive: updatedTimer.isActive,
             isPaused: false,
             endTimestamp: updatedTimer.endTimestamp,
             remainingTime: 0
-          });
+          };
+          
+          logger.info(`Broadcasting timer-stopped with data:`, broadcastData);
+          socketService.emitToRoom(timer.roomId, 'timer-stopped', broadcastData);
           
           // Also emit a general timer update
+          logger.info(`Broadcasting timer-update with timer:`, updatedTimer);
           socketService.emitToRoom(timer.roomId, 'timer-update', updatedTimer);
+          
+          // Send a test event to verify connectivity
+          socketService.emitToRoom(timer.roomId, 'test-event', {
+            message: 'Timer stopped - test broadcast',
+            timerId: updatedTimer.id,
+            roomId: timer.roomId,
+            timestamp: new Date().toISOString()
+          });
           
           logger.info(`Timer ${id} stopped and broadcasted to room ${timer.roomId}`);
         } else {
-          logger.warn('Socket service not available for timer broadcast');
+          logger.error('Socket service not available for timer broadcast - this is a critical issue!');
+          logger.error('Global socket service:', (global as any).socketService);
         }
       } catch (socketError) {
         logger.error('Error broadcasting timer stop:', socketError);
+        logger.error('Socket error details:', socketError.message, socketError.stack);
       }
       
       logger.info(`Timer ${id} reset by user ${userId}`);

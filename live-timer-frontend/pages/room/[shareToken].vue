@@ -208,9 +208,83 @@ const shareRoom = () => {
 
 // Socket event listeners
 const setupSocketListeners = () => {
-  const { socket } = useSocket()
+  console.log('🔧 Setting up socket listeners...')
+  console.log('🔧 Socket available:', !!socket.value)
+  console.log('🔧 Socket connected:', socket.value?.connected)
   
   if (socket.value) {
+    // Add a catch-all listener for debugging
+    socket.value.onAny((eventName, ...args) => {
+      console.log('📨 Received socket event:', eventName, args)
+    })
+    
+    socket.value.on('room-joined', (data) => {
+      console.log('🏠 Room joined event received:', data)
+    })
+    
+    socket.value.on('test-event', (data) => {
+      console.log('🧪 Test event received:', data)
+    })
+    
+    socket.value.on('pong', (data) => {
+      console.log('🏓 Pong received:', data)
+    })
+    
+    socket.value.on('room-state', (data) => {
+      console.log('🏠 Room state received:', data)
+    })
+    
+    socket.value.on('user-count', (data) => {
+      console.log('👥 User count received:', data)
+    })
+    
+    socket.value.on('sync-response', (data) => {
+      console.log('🔄 Sync response received:', data)
+    })
+    
+    socket.value.on('timer-finished', (data) => {
+      console.log('🏁 Timer finished received:', data)
+    })
+    
+    socket.value.on('timer-created', (data) => {
+      console.log('🆕 Timer created received:', data)
+    })
+    
+    socket.value.on('timer-stopped', (data) => {
+      console.log('🔴 Timer stopped received:', data)
+    })
+    
+    socket.value.on('timer-paused', (data) => {
+      console.log('🟡 Timer paused received:', data)
+    })
+    
+    socket.value.on('timer-started', (data) => {
+      console.log('🟢 Timer started received:', data)
+    })
+    
+    socket.value.on('timer-resumed', (data) => {
+      console.log('▶️ Timer resumed received:', data)
+    })
+    
+    socket.value.on('timer-reset', (data) => {
+      console.log('🔄 Timer reset received:', data)
+    })
+    
+    socket.value.on('timer-deleted', (data) => {
+      console.log('🗑️ Timer deleted received:', data)
+    })
+    
+    socket.value.on('timer-updated', (data) => {
+      console.log('✏️ Timer updated received:', data)
+    })
+    
+    socket.value.on('timer-created', (data) => {
+      console.log('🆕 Timer created received:', data)
+      if (data.roomId === room.value?.id) {
+        timer.value.id = data.id
+      }
+    })
+    
     socket.value.on('timer-update', (data) => {
       console.log('Received timer-update:', data)
       if (data.roomId === room.value?.id) {
@@ -224,13 +298,8 @@ const setupSocketListeners = () => {
       }
     })
     
-    socket.value.on('timer-created', (data) => {
-      if (data.roomId === room.value?.id) {
-        timer.value.id = data.id
-      }
-    })
-    
     socket.value.on('timer-finished', (data) => {
+      console.log('🏁 Timer finished received:', data)
       if (data.roomId === room.value?.id) {
         timer.value.isActive = false
         timer.value.isPaused = false
@@ -244,7 +313,11 @@ const setupSocketListeners = () => {
       console.log('🟢 Current room ID:', room.value?.id)
       console.log('🟢 Data room ID:', data.roomId)
       console.log('🟢 Room match check:', data.roomId === room.value?.id)
-      if (data.roomId === room.value?.id) {
+      console.log('🟢 ShareToken match check:', data.roomId === room.value?.id || data.shareToken === route.params.shareToken)
+      
+      // Accept events if room ID matches OR if we don't have room ID yet (initial connection)
+      // TEMPORARY: Accept all events for debugging
+      if (data.roomId === room.value?.id || !room.value?.id || true) {
         console.log('✅ Timer started event matches room (public), updating timer state')
         timer.value.isActive = data.isActive
         timer.value.isPaused = false
@@ -258,28 +331,45 @@ const setupSocketListeners = () => {
         console.log('❌ Timer started event does not match room (public)')
         console.log('❌ Expected room ID:', room.value?.id)
         console.log('❌ Received room ID:', data.roomId)
+        console.log('❌ ShareToken:', route.params.shareToken)
       }
     })
     
     socket.value.on('timer-paused', (data) => {
-      console.log('Timer paused via socket (public):', data)
-      if (data.roomId === room.value?.id) {
+      console.log('🟡 Timer paused via socket (public):', data)
+      console.log('🟡 Current room ID:', room.value?.id)
+      console.log('🟡 Data room ID:', data.roomId)
+      
+      // Accept events if room ID matches OR if we don't have room ID yet (initial connection)
+      // TEMPORARY: Accept all events for debugging
+      if (data.roomId === room.value?.id || !room.value?.id || true) {
+        console.log('✅ Timer paused event matches room (public), updating timer state')
         timer.value.isActive = data.isActive
         timer.value.isPaused = data.isPaused
         timer.value.remainingTime = data.remainingTime
         // Stop countdown
         stopCountdown()
+      } else {
+        console.log('❌ Timer paused event does not match room (public)')
       }
     })
     
     socket.value.on('timer-stopped', (data) => {
-      console.log('Timer stopped via socket (public):', data)
-      if (data.roomId === room.value?.id) {
+      console.log('🔴 Timer stopped via socket (public):', data)
+      console.log('🔴 Current room ID:', room.value?.id)
+      console.log('🔴 Data room ID:', data.roomId)
+      
+      // Accept events if room ID matches OR if we don't have room ID yet (initial connection)
+      // TEMPORARY: Accept all events for debugging
+      if (data.roomId === room.value?.id || !room.value?.id || true) {
+        console.log('✅ Timer stopped event matches room (public), updating timer state')
         timer.value.isActive = false
         timer.value.isPaused = false
         timer.value.remainingTime = 0
         // Stop countdown
         stopCountdown()
+      } else {
+        console.log('❌ Timer stopped event does not match room (public)')
       }
     })
     
@@ -439,6 +529,10 @@ onMounted(async () => {
   await connect()
   console.log('🔌 PUBLIC ROOM: Socket connected, setting up listeners...')
   setupSocketListeners()
+  
+  // Wait a bit for socket to be fully ready
+  await new Promise(resolve => setTimeout(resolve, 500))
+  
   console.log('🔗 Joining room with shareToken:', route.params.shareToken)
   joinRoom({ shareToken: route.params.shareToken, userId: null })
   console.log('🔌 PUBLIC ROOM: Socket setup complete')
