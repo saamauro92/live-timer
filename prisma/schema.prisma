@@ -99,8 +99,9 @@ model Room {
   createdAt   DateTime @default(now()) @db.Timestamptz
   updatedAt   DateTime @updatedAt @db.Timestamptz
   
-  owner  User    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  timers Timer[]
+  owner    User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  timers   Timer[]
+  messages RoomMessage[]
   
   @@map("rooms")
   @@index([shareToken])
@@ -117,6 +118,8 @@ model Timer {
   endTimestamp   DateTime @db.Timestamptz
   duration       Int      // milliseconds
   isActive       Boolean  @default(false)
+  order          Int      @default(0) // For ordering timers in the room
+  completionMessage String? @db.Text // Custom message to show when timer finishes
   createdAt      DateTime @default(now()) @db.Timestamptz
   
   room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
@@ -125,4 +128,24 @@ model Timer {
   @@index([roomId])
   @@index([isActive])
   @@index([createdAt])
+  @@index([roomId, order])
+}
+
+model RoomMessage {
+  id          String   @id @default(uuid()) @db.Uuid
+  roomId      String   @db.Uuid
+  message     String   @db.Text
+  messageType String   @default("live") // "live" or "completion"
+  isActive    Boolean  @default(true)
+  expiresAt   DateTime? @db.Timestamptz // For temporary messages
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  updatedAt   DateTime @updatedAt @db.Timestamptz
+  
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  
+  @@map("room_messages")
+  @@index([roomId])
+  @@index([messageType])
+  @@index([isActive])
+  @@index([expiresAt])
 }

@@ -27,6 +27,47 @@
       </div>
     </div>
 
+    <!-- Live Message Display (for all users) -->
+    <div v-if="currentLiveMessage" class="mb-6">
+      <div class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-4 rounded-xl shadow-lg">
+        <div class="flex items-center space-x-3">
+          <div class="w-3 h-3 bg-white rounded-full animate-pulse"></div>
+          <div class="flex-1">
+            <div class="flex items-center space-x-2 mb-1">
+              <span class="text-sm font-semibold uppercase tracking-wide">🔴 LIVE MESSAGE</span>
+              <div class="w-2 h-2 bg-white rounded-full animate-ping"></div>
+            </div>
+            <p class="text-lg font-medium">{{ currentLiveMessage }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Debug: Show live message state -->
+    <div class="mb-4 p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs">
+      <strong>Debug Info:</strong><br>
+      Live Message Value: "{{ currentLiveMessage }}"<br>
+      Has Live Message: {{ !!currentLiveMessage }}<br>
+      Room ID: {{ room?.id }}
+    </div>
+
+    <!-- Timer Completion Message Display -->
+    <div v-if="showCompletionMessage" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md mx-4 shadow-xl">
+        <div class="flex items-center space-x-2 mb-4">
+          <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+          <span class="text-lg font-semibold text-gray-900 dark:text-white">Timer Complete!</span>
+        </div>
+        <p class="text-gray-700 dark:text-gray-300 mb-4">{{ completionMessage }}</p>
+        <button 
+          @click="showCompletionMessage = false"
+          class="btn-primary w-full"
+        >
+          Continue
+        </button>
+      </div>
+    </div>
+
     <!-- Timer Section -->
     <div class="card p-8 mb-8">
       <div class="text-center">
@@ -113,6 +154,9 @@ const timer = ref({
   isPaused: false
 })
 const members = ref([])
+const currentLiveMessage = ref('')
+const showCompletionMessage = ref(false)
+const completionMessage = ref('')
 // Timer control variables removed - public room is read-only
 
 const formatTime = (seconds) => {
@@ -204,6 +248,40 @@ const shareRoom = () => {
   const url = window.location.href
   navigator.clipboard.writeText(url)
   // You could add a toast notification here
+}
+
+// Load current live message (for all users)
+const loadCurrentLiveMessage = async () => {
+  try {
+    const config = useRuntimeConfig()
+    console.log('Loading live message for room:', room.value?.id)
+    console.log('API Base URL:', config.public.apiBase)
+    
+    const response = await $fetch(`${config.public.apiBase}/api/rooms/${room.value?.id}/messages/live`)
+    console.log('Live message API response:', response)
+    
+    if (response.success && response.data.message) {
+      currentLiveMessage.value = response.data.message
+      console.log('✅ Live message loaded for public view:', response.data.message)
+    } else {
+      console.log('ℹ️ No live message found for public view')
+      console.log('Response data:', response.data)
+    }
+  } catch (error) {
+    console.error('❌ Error loading live message for public view:', error)
+  }
+}
+
+const showTimerCompletionMessage = (timer) => {
+  if (timer.completionMessage) {
+    completionMessage.value = timer.completionMessage
+    showCompletionMessage.value = true
+    
+    // Auto-hide after 10 seconds
+    setTimeout(() => {
+      showCompletionMessage.value = false
+    }, 10000)
+  }
 }
 
 // Socket event listeners
@@ -300,10 +378,29 @@ const setupSocketListeners = () => {
     
     socket.value.on('timer-finished', (data) => {
       console.log('🏁 Timer finished received:', data)
+      console.log('🏁 Timer finished data details:', {
+        timerId: data.timerId,
+        title: data.title,
+        roomId: data.roomId,
+        completionMessage: data.completionMessage,
+        completionMessageType: typeof data.completionMessage,
+        completionMessageExists: !!data.completionMessage
+      })
+      
       if (data.roomId === room.value?.id) {
         timer.value.isActive = false
         timer.value.isPaused = false
         timer.value.remainingTime = 0
+        
+        // Show completion message if it exists
+        if (data.completionMessage) {
+          console.log('🎉 Showing completion message for public view:', data.completionMessage)
+          showTimerCompletionMessage({
+            completionMessage: data.completionMessage
+          })
+        } else {
+          console.log('🎉 No completion message to show for public view')
+        }
       }
     })
     
@@ -425,6 +522,30 @@ const setupSocketListeners = () => {
       }
     })
     
+    // Handle live message updates (for all users)
+    socket.value.on('live-message-updated', (data) => {
+      console.log('📢 Live message updated for public view:', data)
+      console.log('📢 Current room ID:', room.value?.id)
+      console.log('📢 Data room ID:', data.roomId)
+      console.log('📢 Room match:', data.roomId === room.value?.id)
+      
+      if (data.roomId === room.value?.id) {
+        currentLiveMessage.value = data.message || ''
+        console.log('✅ Live message received via socket for public view:', data.message)
+        console.log('✅ Current live message value:', currentLiveMessage.value)
+      } else {
+        console.log('❌ Live message room ID mismatch')
+      }
+    })
+    
+    // Handle timer completion messages
+    socket.value.on('timer-completion-message', (data) => {
+      console.log('Timer completion message for public view:', data)
+      if (data.roomId === room.value?.id) {
+        showTimerCompletionMessage(data)
+      }
+    })
+    
     // Test event listener for debugging
     socket.value.on('test-event', (data) => {
       console.log('🧪 TEST EVENT RECEIVED (PUBLIC):', data)
@@ -511,6 +632,16 @@ const handleVisibilityChange = () => {
   }
 }
 
+// Set up cleanup hooks first (before any async operations)
+let syncInterval = null
+
+onUnmounted(() => {
+  if (syncInterval) clearInterval(syncInterval)
+  stopCountdown()
+  leaveRoomSocket(room.value?.id)
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
+})
+
 // Initialize with proper state management
 onMounted(async () => {
   console.log('Initializing public room page...')
@@ -523,6 +654,11 @@ onMounted(async () => {
     fetchRoom(),
     fetchTimer()
   ])
+  
+  // Load live message after room is fetched
+  if (room.value?.id) {
+    await loadCurrentLiveMessage()
+  }
   
   // Then connect to socket and join room
   console.log('🔌 PUBLIC ROOM: Starting socket connection...')
@@ -550,24 +686,14 @@ onMounted(async () => {
   }, 1000)
   
   // Set up periodic sync to ensure state consistency
-  const syncInterval = setInterval(() => {
+  syncInterval = setInterval(() => {
     if (socket.value && socket.value.connected) {
       socket.value.emit('request-sync')
     }
   }, 30000) // Sync every 30 seconds
-  
-  // Store interval for cleanup
-  onUnmounted(() => {
-    clearInterval(syncInterval)
-  })
 })
 
-// Cleanup
-onUnmounted(() => {
-  stopCountdown()
-  leaveRoomSocket(room.value?.id)
-  document.removeEventListener('visibilitychange', handleVisibilityChange)
-})
+// Cleanup is now handled in onMounted
 
 // SEO
 useHead({

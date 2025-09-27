@@ -300,10 +300,36 @@ export class SocketService {
         const expiredTimers = await timerService.getExpiredTimers();
         for (const timer of expiredTimers) {
           await timerService.markAsExpired(timer.id);
+          
+          // Debug: Log timer completion message
+          logger.info(`=== TIMER COMPLETION DEBUG ===`);
+          logger.info(`Timer ID: ${timer.id}`);
+          logger.info(`Timer title: ${timer.title}`);
+          logger.info(`Completion message: ${timer.completionMessage}`);
+          logger.info(`Completion message type: ${typeof timer.completionMessage}`);
+          logger.info(`Completion message exists: ${!!timer.completionMessage}`);
+          
+          // Send timer-finished event with completion message
           this.emitToRoom(timer.roomId, 'timer-finished', {
             timerId: timer.id,
-            title: timer.title
+            title: timer.title,
+            roomId: timer.roomId,
+            completionMessage: timer.completionMessage
           });
+          
+          // Also send completion message event if there's a message
+          if (timer.completionMessage) {
+            this.emitToRoom(timer.roomId, 'timer-completion-message', {
+              roomId: timer.roomId,
+              timerId: timer.id,
+              message: timer.completionMessage,
+              timestamp: new Date().toISOString()
+            });
+            logger.info(`Timer completion message broadcasted: ${timer.completionMessage}`);
+          } else {
+            logger.info(`No completion message to broadcast for timer ${timer.id}`);
+          }
+          
           logger.info(`Timer ${timer.id} expired and marked as inactive`);
         }
       } catch (error) {

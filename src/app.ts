@@ -11,6 +11,7 @@ import { authenticateToken, authenticateRoomOwner, optionalAuth } from './middle
 import { RoomController } from './controllers/room.controller';
 import { TimerController } from './controllers/timer.controller';
 import { AuthController } from './controllers/auth.controller';
+import { messageController } from './controllers/message.controller';
 import { SocketService } from './services/socket.service';
 
 export const createApp = (): express.Application => {
@@ -98,6 +99,16 @@ export const createApp = (): express.Application => {
   app.get('/api/timers/active', authenticateToken, timerController.getActiveTimers);
   app.put('/api/timers/:id', authenticateToken, timerController.updateTimer);
   app.delete('/api/timers/:id', authenticateToken, timerController.deleteTimer);
+  
+  // New timer management routes
+  app.post('/api/rooms/:roomId/timers/reorder', authenticateToken, timerController.reorderTimers);
+  app.post('/api/rooms/:roomId/timers/start-all', authenticateToken, timerController.startAllTimers);
+  app.post('/api/rooms/:roomId/timers/pause-all', authenticateToken, timerController.pauseAllTimers);
+
+  // Message routes
+  app.post('/api/rooms/:roomId/messages/live', authenticateToken, messageController.updateLiveMessage);
+  app.delete('/api/rooms/:roomId/messages/live', authenticateToken, messageController.clearLiveMessage);
+  app.get('/api/rooms/:roomId/messages/live', optionalAuth, messageController.getLiveMessage);
 
   // Debug routes
   app.get('/api/debug/rooms', roomController.getAllRoomsDebug);

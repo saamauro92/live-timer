@@ -10,6 +10,13 @@ export class TimerService {
         throw new Error('Invalid duration: must be between 1 second and 24 hours');
       }
 
+      // Get the next order number for this room
+      const lastTimer = await prisma.timer.findFirst({
+        where: { roomId: data.roomId },
+        orderBy: { order: 'desc' }
+      });
+      const nextOrder = (lastTimer?.order || 0) + 1;
+
       const now = new Date();
       const timer = await prisma.timer.create({
         data: {
@@ -20,11 +27,12 @@ export class TimerService {
           startTimestamp: now,
           endTimestamp: new Date(now.getTime() + data.duration),
           duration: data.duration,
-          isActive: false
+          isActive: false,
+          order: nextOrder
         }
       });
 
-      logger.info(`Timer created: ${timer.id} in room ${data.roomId}`);
+      logger.info(`Timer created: ${timer.id} in room ${data.roomId} with order ${nextOrder}`);
       return timer;
     } catch (error) {
       logger.error('Error creating timer:', error);
@@ -47,7 +55,7 @@ export class TimerService {
     try {
       return await prisma.timer.findMany({
         where: { roomId },
-        orderBy: { createdAt: 'asc' }
+        orderBy: [{ order: 'asc' }, { createdAt: 'asc' }]
       });
     } catch (error) {
       logger.error('Error finding timers by room ID:', error);
@@ -224,6 +232,102 @@ export class TimerService {
     } catch (error) {
       logger.error('Error getting active timers:', error);
       throw new Error('Failed to get active timers');
+    }
+  }
+
+  async reorderTimers(roomId: string, timerIds: string[]): Promise<boolean> {
+    try {
+      // Verify all timers belong to the room
+      const timers = await prisma.timer.findMany({
+        where: { 
+          id: { in: timerIds },
+          roomId: roomId
+        }
+      });
+
+      if (timers.length !== timerIds.length) {
+        throw new Error('Some timers do not belong to this room');
+      }
+
+      // Update order for each timer
+      const updatePromises = timerIds.map((timerId, index) => 
+        prisma.timer.update({
+          where: { id: timerId },
+          data: { order: index + 1 }
+        })
+      );
+
+      await Promise.all(updatePromises);
+
+      logger.info(`Reordered ${timerIds.length} timers in room ${roomId}`);
+      return true;
+    } catch (error) {
+      logger.error('Error reordering timers:', error);
+      throw new Error('Failed to reorder timers');
+    }
+  }
+
+  async startAllTimers(roomId: string): Promise<Timer[]> {
+    try {
+      // Get all inactive timers in the room, ordered by order field
+      const timers = await prisma.timer.findMany({
+        where: { 
+          roomId: roomId,
+          isActive: false
+        },
+        orderBy: { order: 'asc' }
+      });
+
+      const now = new Date();
+      const updatePromises = timers.map(timer => 
+        prisma.timer.update({
+          where: { id: timer.id },
+          data: {
+            isActive: true,
+            startTimestamp: now,
+            endTimestamp: new Date(now.getTime() + timer.duration)
+          }
+        })
+      );
+
+      const updatedTimers = await Promise.all(updatePromises);
+
+      logger.info(`Started ${updatedTimers.length} timers in room ${roomId}`);
+      return updatedTimers;
+    } catch (error) {
+      logger.error('Error starting all timers:', error);
+      throw new Error('Failed to start all timers');
+    }
+  }
+
+  async pauseAllTimers(roomId: string): Promise<Timer[]> {
+    try {
+      // Get all active timers in the room
+      const timers = await prisma.timer.findMany({
+        where: { 
+          roomId: roomId,
+          isActive: true
+        }
+      });
+
+      const now = new Date();
+      const updatePromises = timers.map(timer => 
+        prisma.timer.update({
+          where: { id: timer.id },
+          data: {
+            isActive: false,
+            duration: Math.max(0, timer.endTimestamp.getTime() - now.getTime())
+          }
+        })
+      );
+
+      const updatedTimers = await Promise.all(updatePromises);
+
+      logger.info(`Paused ${updatedTimers.length} timers in room ${roomId}`);
+      return updatedTimers;
+    } catch (error) {
+      logger.error('Error pausing all timers:', error);
+      throw new Error('Failed to pause all timers');
     }
   }
 }

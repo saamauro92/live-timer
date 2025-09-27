@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import { timerService } from '../services/timer.service';
 import { roomService } from '../services/room.service';
+import { messageController } from './message.controller';
 import { logger } from '../utils/logger';
 import { ApiResponse } from '../types';
 
@@ -14,7 +15,8 @@ const createTimerSchema = z.object({
 const updateTimerSchema = z.object({
   title: z.string().min(1).max(200).optional(),
   description: z.string().optional(),
-  duration: z.number().min(1000).max(86400000).optional()
+  duration: z.number().min(1000).max(86400000).optional(),
+  completionMessage: z.string().max(500).optional()
 });
 
 export class TimerController {
@@ -576,6 +578,186 @@ export class TimerController {
       const response: ApiResponse = {
         success: false,
         message: 'Internal server error'
+      };
+      res.status(500).json(response);
+    }
+  }
+
+  // POST /api/rooms/:roomId/timers/reorder - Reorder timers
+  async reorderTimers(req: Request, res: Response): Promise<void> {
+    try {
+      const { roomId } = req.params;
+      const userId = req.user?.id;
+      const { timerIds } = req.body;
+
+      if (!userId) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Authentication required'
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      // Validate room ownership
+      const room = await roomService.findById(roomId);
+      if (!room || room.ownerId !== userId) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized'
+        };
+        res.status(403).json(response);
+        return;
+      }
+
+      if (!Array.isArray(timerIds) || timerIds.length === 0) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Invalid timer IDs'
+        };
+        res.status(400).json(response);
+        return;
+      }
+
+      const success = await timerService.reorderTimers(roomId, timerIds);
+      
+      if (!success) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Failed to reorder timers'
+        };
+        res.status(400).json(response);
+        return;
+      }
+
+      // Broadcast reorder to all room members
+      const socketService = (global as any).socketService;
+      if (socketService) {
+        socketService.emitToRoom(roomId, 'timers-reordered', { timerIds });
+      }
+
+      logger.info(`Timers reordered in room ${roomId} by user ${userId}`);
+      
+      const response: ApiResponse = {
+        success: true,
+        message: 'Timers reordered successfully'
+      };
+      res.json(response);
+    } catch (error) {
+      logger.error('Error reordering timers:', error);
+      const response: ApiResponse = {
+        success: false,
+        message: 'Failed to reorder timers'
+      };
+      res.status(500).json(response);
+    }
+  }
+
+  // POST /api/rooms/:roomId/timers/start-all - Start all timers in sequence
+  async startAllTimers(req: Request, res: Response): Promise<void> {
+    try {
+      const { roomId } = req.params;
+      const userId = req.user?.id;
+
+      if (!userId) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Authentication required'
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      // Validate room ownership
+      const room = await roomService.findById(roomId);
+      if (!room || room.ownerId !== userId) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized'
+        };
+        res.status(403).json(response);
+        return;
+      }
+
+      const updatedTimers = await timerService.startAllTimers(roomId);
+
+      // Broadcast to all room members
+      const socketService = (global as any).socketService;
+      if (socketService) {
+        socketService.emitToRoom(roomId, 'all-timers-started', { 
+          timers: updatedTimers,
+          roomId 
+        });
+      }
+
+      logger.info(`All timers started in room ${roomId} by user ${userId}`);
+      
+      const response: ApiResponse = {
+        success: true,
+        data: { timers: updatedTimers },
+        message: 'All timers started successfully'
+      };
+      res.json(response);
+    } catch (error) {
+      logger.error('Error starting all timers:', error);
+      const response: ApiResponse = {
+        success: false,
+        message: 'Failed to start all timers'
+      };
+      res.status(500).json(response);
+    }
+  }
+
+  // POST /api/rooms/:roomId/timers/pause-all - Pause all timers
+  async pauseAllTimers(req: Request, res: Response): Promise<void> {
+    try {
+      const { roomId } = req.params;
+      const userId = req.user?.id;
+
+      if (!userId) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Authentication required'
+        };
+        res.status(401).json(response);
+        return;
+      }
+
+      // Validate room ownership
+      const room = await roomService.findById(roomId);
+      if (!room || room.ownerId !== userId) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Unauthorized'
+        };
+        res.status(403).json(response);
+        return;
+      }
+
+      const updatedTimers = await timerService.pauseAllTimers(roomId);
+
+      // Broadcast to all room members
+      const socketService = (global as any).socketService;
+      if (socketService) {
+        socketService.emitToRoom(roomId, 'all-timers-paused', { 
+          timers: updatedTimers,
+          roomId 
+        });
+      }
+
+      logger.info(`All timers paused in room ${roomId} by user ${userId}`);
+      
+      const response: ApiResponse = {
+        success: true,
+        data: { timers: updatedTimers },
+        message: 'All timers paused successfully'
+      };
+      res.json(response);
+    } catch (error) {
+      logger.error('Error pausing all timers:', error);
+      const response: ApiResponse = {
+        success: false,
+        message: 'Failed to pause all timers'
       };
       res.status(500).json(response);
     }
