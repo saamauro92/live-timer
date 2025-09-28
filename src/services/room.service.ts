@@ -128,7 +128,8 @@ export class RoomService {
         where: { id },
         data: {
           name: data.name,
-          description: data.description
+          description: data.description,
+          showTimerName: data.showTimerName
         }
       });
     } catch (error) {

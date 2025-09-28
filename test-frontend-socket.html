@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend Socket Test</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+    <h1>Frontend Socket Connection Test</h1>
+    <div id="status">Connecting...</div>
+    <div id="events"></div>
+    
+    <script>
+        const statusDiv = document.getElementById('status');
+        const eventsDiv = document.getElementById('events');
+        
+        function log(message) {
+            console.log(message);
+            eventsDiv.innerHTML += '<div>' + new Date().toLocaleTimeString() + ': ' + message + '</div>';
+        }
+        
+        // Test with the same configuration as the frontend
+        const socket = io('http://localhost:3001', {
+            auth: {
+                // No token for anonymous connection
+            },
+            autoConnect: true,
+            reconnection: true,
+            reconnectionDelay: 1000,
+            reconnectionAttempts: 5,
+            timeout: 20000
+        });
+        
+        socket.on('connect', () => {
+            statusDiv.textContent = 'Connected: ' + socket.id;
+            log('✅ Connected to server: ' + socket.id);
+            
+            // Join the room
+            log('🔗 Joining room...');
+            socket.emit('join-room', { shareToken: '092d826a-a42d-4cd0-a593-81715eb5df61' });
+        });
+        
+        socket.on('disconnect', (reason) => {
+            statusDiv.textContent = 'Disconnected: ' + reason;
+            log('❌ Disconnected: ' + reason);
+        });
+        
+        socket.on('connect_error', (error) => {
+            statusDiv.textContent = 'Connection Error: ' + error.message;
+            log('❌ Connection error: ' + error.message);
+        });
+        
+        socket.on('room-state', (data) => {
+            log('🏠 Room state received');
+        });
+        
+        socket.on('user-count', (count) => {
+            log('👥 User count: ' + count);
+        });
+        
+        socket.on('user-count-update', (data) => {
+            log('👥 User count update: ' + data.count + ' users, ' + data.connections.length + ' connections');
+        });
+        
+        socket.on('user-joined', (data) => {
+            log('➕ User joined: ' + data.connection.browser + ' on ' + data.connection.os);
+        });
+        
+        socket.on('user-left', (data) => {
+            log('➖ User left: ' + data.socketId);
+        });
+        
+        socket.on('test-event', (data) => {
+            log('🧪 Test event: ' + data.message);
+        });
+        
+        socket.on('error', (error) => {
+            log('❌ Socket error: ' + JSON.stringify(error));
+        });
+    </script>
+</body>
+</html>

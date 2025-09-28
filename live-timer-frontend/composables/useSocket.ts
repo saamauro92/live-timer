@@ -107,10 +107,12 @@ export const useSocket = () => {
     }
   }
   
-  // Cleanup on unmount
-  onUnmounted(() => {
-    disconnect()
-  })
+  // Cleanup on unmount - only if we're in a component context
+  if (getCurrentInstance()) {
+    onUnmounted(() => {
+      disconnect()
+    })
+  }
   
   return {
     socket,

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend Debug Test</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+    <h1>Frontend Debug Test</h1>
+    <div id="status">Connecting...</div>
+    <div id="events"></div>
+    
+    <script>
+        const statusDiv = document.getElementById('status');
+        const eventsDiv = document.getElementById('events');
+        
+        function log(message) {
+            console.log(message);
+            eventsDiv.innerHTML += '<div>' + new Date().toLocaleTimeString() + ': ' + message + '</div>';
+        }
+        
+        // Test with the same configuration as the frontend
+        const socket = io('http://localhost:3001', {
+            auth: {
+                // No token for anonymous connection
+            },
+            autoConnect: true,
+            reconnection: true,
+            reconnectionDelay: 1000,
+            reconnectionAttempts: 5,
+            timeout: 20000
+        });
+        
+        socket.on('connect', () => {
+            statusDiv.textContent = 'Connected: ' + socket.id;
+            log('✅ Connected to server: ' + socket.id);
+            
+            // Join the room
+            log('🔗 Joining room...');
+            socket.emit('join-room', { shareToken: '092d826a-a42d-4cd0-a593-81715eb5df61' });
+        });
+        
+        socket.on('disconnect', (reason) => {
+            statusDiv.textContent = 'Disconnected: ' + reason;
+            log('❌ Disconnected: ' + reason);
+        });
+        
+        socket.on('connect_error', (error) => {
+            statusDiv.textContent = 'Connection Error: ' + error.message;
+            log('❌ Connection error: ' + error.message);
+        });
+        
+        socket.on('room-state', (data) => {
+            log('🏠 Room state received - Room ID: ' + data.id);
+        });
+        
+        socket.on('user-count', (count) => {
+            log('👥 User count: ' + count);
+        });
+        
+        socket.on('user-count-update', (data) => {
+            log('👥 User count update: ' + data.count + ' users, ' + data.connections.length + ' connections');
+            log('📋 Room ID in event: ' + data.roomId);
+        });
+        
+        socket.on('user-joined', (data) => {
+            log('➕ User joined: ' + data.connection.browser + ' on ' + data.connection.os);
+            log('📋 Room ID in event: ' + data.roomId);
+        });
+        
+        socket.on('user-left', (data) => {
+            log('➖ User left: ' + data.socketId);
+            log('📋 Room ID in event: ' + data.roomId);
+        });
+        
+        socket.on('test-event', (data) => {
+            log('🧪 Test event: ' + data.message);
+            log('📋 Room ID in event: ' + data.roomId);
+        });
+        
+        socket.on('error', (error) => {
+            log('❌ Socket error: ' + JSON.stringify(error));
+        });
+        
+        // Test joining another room to trigger events
+        setTimeout(() => {
+            log('🔄 Creating second connection to test events...');
+            const socket2 = io('http://localhost:3001', {
+                auth: {},
+                autoConnect: true
+            });
+            
+            socket2.on('connect', () => {
+                log('✅ Second connection: ' + socket2.id);
+                socket2.emit('join-room', { shareToken: '092d826a-a42d-4cd0-a593-81715eb5df61' });
+            });
+            
+            // Disconnect second socket after 5 seconds
+            setTimeout(() => {
+                log('🔄 Disconnecting second connection...');
+                socket2.disconnect();
+            }, 5000);
+        }, 5000);
+    </script>
+</body>
+</html>

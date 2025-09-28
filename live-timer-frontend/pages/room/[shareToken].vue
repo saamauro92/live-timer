@@ -1,141 +1,68 @@
 <template>
-  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <!-- Room Header -->
-    <div class="mb-8">
-      <div class="flex items-center justify-between">
-        <div>
-          <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ room?.name }}</h1>
-          <p class="text-gray-600 dark:text-gray-300 mt-2">{{ room?.description }}</p>
-          <div class="flex items-center mt-2 text-sm text-gray-500 dark:text-gray-400">
-            <span>Room Code: {{ room?.shareToken }}</span>
-            <button 
-              @click="copyRoomCode"
-              class="ml-2 text-blue-600 hover:text-blue-800"
-            >
-              Copy
-            </button>
-          </div>
+  <!-- Stage Display Layout - Full Screen Black Background -->
+  <div class="min-h-screen bg-black text-white overflow-hidden">
+    <!-- Logo - Top Left -->
+    <div class="absolute top-6 left-6 z-10">
+      <div class="flex items-center">
+        <div class="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
+          <span class="text-white font-bold text-lg">LT</span>
         </div>
-        <div class="flex space-x-2">
-          <button 
-            @click="shareRoom"
-            class="btn-secondary"
-          >
-            Share Room
-          </button>
-        </div>
+        <span class="ml-3 text-2xl font-semibold text-white">
+          Live Timer
+        </span>
       </div>
     </div>
 
-    <!-- Live Message Display (for all users) -->
-    <div v-if="currentLiveMessage" class="mb-6">
-      <div class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-4 rounded-xl shadow-lg">
-        <div class="flex items-center space-x-3">
-          <div class="w-3 h-3 bg-white rounded-full animate-pulse"></div>
-          <div class="flex-1">
-            <div class="flex items-center space-x-2 mb-1">
-              <span class="text-sm font-semibold uppercase tracking-wide">🔴 LIVE MESSAGE</span>
-              <div class="w-2 h-2 bg-white rounded-full animate-ping"></div>
-            </div>
-            <p class="text-lg font-medium">{{ currentLiveMessage }}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Debug: Show live message state -->
-    <div class="mb-4 p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs">
-      <strong>Debug Info:</strong><br>
-      Live Message Value: "{{ currentLiveMessage }}"<br>
-      Has Live Message: {{ !!currentLiveMessage }}<br>
-      Room ID: {{ room?.id }}
+    <!-- Timer Name - Top Center -->
+    <div v-if="showTimerName && currentTimerName" class="absolute top-6 left-1/2 transform -translate-x-1/2 z-10">
+      <h1 class="text-3xl font-bold text-blue-400 text-center">
+        {{ currentTimerName }}
+      </h1>
     </div>
 
-    <!-- Timer Completion Message Display -->
-    <div v-if="showCompletionMessage" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md mx-4 shadow-xl">
-        <div class="flex items-center space-x-2 mb-4">
-          <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-          <span class="text-lg font-semibold text-gray-900 dark:text-white">Timer Complete!</span>
-        </div>
-        <p class="text-gray-700 dark:text-gray-300 mb-4">{{ completionMessage }}</p>
-        <button 
-          @click="showCompletionMessage = false"
-          class="btn-primary w-full"
-        >
-          Continue
-        </button>
+    <!-- Main Timer Display - Center -->
+    <div class="flex flex-col items-center justify-center min-h-screen">
+      <!-- Large Countdown Timer -->
+      <div 
+        class="font-mono font-bold text-center transition-all duration-500"
+        :class="currentLiveMessage ? 'text-8xl' : 'text-9xl'"
+        :style="{ 
+          fontSize: currentLiveMessage ? '10rem' : '16rem',
+          lineHeight: '1',
+          textShadow: '0 0 30px rgba(255, 255, 255, 0.4)'
+        }"
+      >
+        {{ formatTime(timer.remainingTime) }}
       </div>
-    </div>
 
-    <!-- Timer Section -->
-    <div class="card p-8 mb-8">
-      <div class="text-center">
-        <div class="mb-6">
-          <div class="text-6xl font-mono font-bold text-gray-900 dark:text-white mb-4">
-            {{ formatTime(timer.remainingTime) }}
-          </div>
-          <!-- Debug info -->
-          <div class="text-xs text-gray-500 mb-2">
-            Debug: ID={{ timer.id }}, Active={{ timer.isActive }}, Paused={{ timer.isPaused }}, Time={{ timer.remainingTime }}s
-            <br>
-            <span v-if="timer.id" class="text-green-600">✓ Timer loaded from server</span>
-            <span v-else class="text-red-600">✗ No timer found</span>
-          </div>
-          <div v-if="timer.isActive" class="flex items-center justify-center text-green-600 dark:text-green-400">
-            <div class="w-3 h-3 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-            <span class="font-medium">Timer Running</span>
-          </div>
-          <div v-else-if="timer.isPaused" class="flex items-center justify-center text-yellow-600 dark:text-yellow-400">
-            <div class="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
-            <span class="font-medium">Timer Paused</span>
-          </div>
-          <div v-else class="flex items-center justify-center text-gray-500 dark:text-gray-400">
-            <div class="w-3 h-3 bg-gray-400 rounded-full mr-2"></div>
-            <span class="font-medium">Timer Stopped</span>
-          </div>
+      <!-- Live Message Display -->
+      <div 
+        v-if="currentLiveMessage" 
+        class="mt-8 text-center animate-fadeIn"
+        :style="{ 
+          fontSize: '4rem',
+          lineHeight: '1.2',
+          textShadow: '0 0 15px rgba(34, 197, 94, 0.5)'
+        }"
+      >
+        <div class="text-green-400 font-semibold">
+          {{ currentLiveMessage }}
         </div>
+      </div>
 
-        <!-- Public View - No Timer Controls -->
-        <div class="text-center text-gray-600 dark:text-gray-400 mb-6">
-          <p class="text-lg mb-4">🔒 Timer controls are only available to authenticated users</p>
-          <p class="text-sm">To control the timer, please <NuxtLink to="/login" class="text-blue-600 hover:underline">log in</NuxtLink></p>
+      <!-- Timer Status Indicator (Small) -->
+      <div class="mt-6 flex items-center justify-center">
+        <div v-if="timer.isActive" class="flex items-center text-green-400">
+          <div class="w-3 h-3 bg-green-500 rounded-full mr-2 animate-pulse"></div>
+          <span class="text-lg font-medium">Running</span>
         </div>
-
-      </div>
-    </div>
-
-    <!-- Room Members -->
-    <div class="card p-6">
-      <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Room Members</h3>
-      <div v-if="members.length === 0" class="text-center py-8">
-        <p class="text-gray-500 dark:text-gray-400">No members in this room yet.</p>
-      </div>
-      <div v-else class="grid gap-3">
-        <div 
-          v-for="member in members" 
-          :key="member.id"
-          class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
-        >
-          <div class="flex items-center">
-            <div class="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mr-3">
-              <span class="text-sm font-medium text-blue-600 dark:text-blue-400">
-                {{ member.name.charAt(0) }}
-              </span>
-            </div>
-            <div>
-              <p class="font-medium text-gray-900 dark:text-white">{{ member.name }}</p>
-              <p class="text-sm text-gray-500 dark:text-gray-400">{{ member.email }}</p>
-            </div>
-          </div>
-          <div v-if="member.isOnline" class="flex items-center text-green-600 dark:text-green-400">
-            <div class="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-            <span class="text-sm">Online</span>
-          </div>
-          <div v-else class="flex items-center text-gray-500 dark:text-gray-400">
-            <div class="w-2 h-2 bg-gray-400 rounded-full mr-2"></div>
-            <span class="text-sm">Offline</span>
-          </div>
+        <div v-else-if="timer.isPaused" class="flex items-center text-yellow-400">
+          <div class="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
+          <span class="text-lg font-medium">Paused</span>
+        </div>
+        <div v-else class="flex items-center text-gray-400">
+          <div class="w-3 h-3 bg-gray-400 rounded-full mr-2"></div>
+          <span class="text-lg font-medium">Stopped</span>
         </div>
       </div>
     </div>
@@ -143,6 +70,11 @@
 </template>
 
 <script setup>
+// Use a custom layout for stage display (no navigation)
+definePageMeta({
+  layout: false
+})
+
 const route = useRoute()
 const { connect, joinRoom, leaveRoom: leaveRoomSocket, socket } = useSocket()
 
@@ -155,8 +87,8 @@ const timer = ref({
 })
 const members = ref([])
 const currentLiveMessage = ref('')
-const showCompletionMessage = ref(false)
-const completionMessage = ref('')
+const showTimerName = ref(true)
+const currentTimerName = ref('')
 // Timer control variables removed - public room is read-only
 
 const formatTime = (seconds) => {
@@ -168,9 +100,11 @@ const formatTime = (seconds) => {
 const fetchRoom = async () => {
   try {
     const response = await $fetch(`/api/rooms/share/${route.params.shareToken}`)
-    console.log('Room response:', response)
     room.value = response.data.room || response.data
     members.value = response.data.members || []
+    
+    // Load room settings
+    showTimerName.value = room.value?.showTimerName ?? true
   } catch (error) {
     console.error('Error fetching room:', error)
     await navigateTo('/')
@@ -179,28 +113,20 @@ const fetchRoom = async () => {
 
 const fetchTimer = async () => {
   try {
-    // Use the specific share route to avoid conflicts with [id] route
     const response = await $fetch(`/api/rooms/share/${route.params.shareToken}`)
-    console.log('Fetched room with timers:', response.data)
     
-    // Handle the correct data structure: data.room.timers or data.timers
     const timers = response.data.room?.timers || response.data.timers || []
-    console.log('Full response:', response)
-    console.log(timers, ' TIMERS ----------------------------------')
     
     if (timers.length > 0) {
-      // Get the most recent timer (last in array)
       const latestTimer = timers[timers.length - 1]
       
       let remainingTime = 0
       
       if (latestTimer.isActive) {
-        // Timer is running - calculate remaining time from endTimestamp
         const now = new Date().getTime()
         const endTime = new Date(latestTimer.endTimestamp).getTime()
         remainingTime = Math.max(0, Math.floor((endTime - now) / 1000))
       } else {
-        // Timer is not active - use duration field (convert from milliseconds to seconds)
         remainingTime = Math.floor(latestTimer.duration / 1000)
       }
       
@@ -211,18 +137,11 @@ const fetchTimer = async () => {
         isPaused: !latestTimer.isActive && remainingTime > 0
       }
       
-      console.log('Loaded timer:', timer.value)
-      console.log('Timer details:', {
-        id: latestTimer.id,
-        endTimestamp: latestTimer.endTimestamp,
-        duration: latestTimer.duration,
-        isActive: latestTimer.isActive,
-        calculatedRemaining: remainingTime,
-        durationInSeconds: Math.floor(latestTimer.duration / 1000)
-      })
+      // Set the current timer name
+      currentTimerName.value = latestTimer.title || 'Timer'
     } else {
       timer.value = { id: null, remainingTime: 0, isActive: false, isPaused: false }
-      console.log('No timers found, resetting timer state')
+      currentTimerName.value = ''
     }
   } catch (error) {
     console.error('Error fetching timer:', error)
@@ -239,132 +158,30 @@ const fetchTimer = async () => {
 
 // Timer control functions removed - public room is read-only
 
-const copyRoomCode = () => {
-  navigator.clipboard.writeText(room.value.shareToken)
-  // You could add a toast notification here
-}
-
-const shareRoom = () => {
-  const url = window.location.href
-  navigator.clipboard.writeText(url)
-  // You could add a toast notification here
-}
+// Removed copyRoomCode and shareRoom functions - not needed for stage display
 
 // Load current live message (for all users)
 const loadCurrentLiveMessage = async () => {
   try {
     const config = useRuntimeConfig()
-    console.log('Loading live message for room:', room.value?.id)
-    console.log('API Base URL:', config.public.apiBase)
-    
     const response = await $fetch(`${config.public.apiBase}/api/rooms/${room.value?.id}/messages/live`)
-    console.log('Live message API response:', response)
     
     if (response.success && response.data.message) {
       currentLiveMessage.value = response.data.message
-      console.log('✅ Live message loaded for public view:', response.data.message)
-    } else {
-      console.log('ℹ️ No live message found for public view')
-      console.log('Response data:', response.data)
     }
   } catch (error) {
-    console.error('❌ Error loading live message for public view:', error)
+    console.error('Error loading live message:', error)
   }
 }
 
-const showTimerCompletionMessage = (timer) => {
-  if (timer.completionMessage) {
-    completionMessage.value = timer.completionMessage
-    showCompletionMessage.value = true
-    
-    // Auto-hide after 10 seconds
-    setTimeout(() => {
-      showCompletionMessage.value = false
-    }, 10000)
-  }
-}
 
 // Socket event listeners
 const setupSocketListeners = () => {
-  console.log('🔧 Setting up socket listeners...')
-  console.log('🔧 Socket available:', !!socket.value)
-  console.log('🔧 Socket connected:', socket.value?.connected)
-  
   if (socket.value) {
-    // Add a catch-all listener for debugging
-    socket.value.onAny((eventName, ...args) => {
-      console.log('📨 Received socket event:', eventName, args)
-    })
     
-    socket.value.on('room-joined', (data) => {
-      console.log('🏠 Room joined event received:', data)
-    })
-    
-    socket.value.on('test-event', (data) => {
-      console.log('🧪 Test event received:', data)
-    })
-    
-    socket.value.on('pong', (data) => {
-      console.log('🏓 Pong received:', data)
-    })
-    
-    socket.value.on('room-state', (data) => {
-      console.log('🏠 Room state received:', data)
-    })
-    
-    socket.value.on('user-count', (data) => {
-      console.log('👥 User count received:', data)
-    })
-    
-    socket.value.on('sync-response', (data) => {
-      console.log('🔄 Sync response received:', data)
-    })
-    
-    socket.value.on('timer-finished', (data) => {
-      console.log('🏁 Timer finished received:', data)
-    })
-    
-    socket.value.on('timer-created', (data) => {
-      console.log('🆕 Timer created received:', data)
-    })
-    
-    socket.value.on('timer-stopped', (data) => {
-      console.log('🔴 Timer stopped received:', data)
-    })
-    
-    socket.value.on('timer-paused', (data) => {
-      console.log('🟡 Timer paused received:', data)
-    })
-    
-    socket.value.on('timer-started', (data) => {
-      console.log('🟢 Timer started received:', data)
-    })
-    
-    socket.value.on('timer-resumed', (data) => {
-      console.log('▶️ Timer resumed received:', data)
-    })
-    
-    socket.value.on('timer-reset', (data) => {
-      console.log('🔄 Timer reset received:', data)
-    })
-    
-    socket.value.on('timer-deleted', (data) => {
-      console.log('🗑️ Timer deleted received:', data)
-    })
-    
-    socket.value.on('timer-updated', (data) => {
-      console.log('✏️ Timer updated received:', data)
-    })
-    
-    socket.value.on('timer-created', (data) => {
-      console.log('🆕 Timer created received:', data)
-      if (data.roomId === room.value?.id) {
-        timer.value.id = data.id
-      }
-    })
+    // Essential socket event listeners for stage display
     
     socket.value.on('timer-update', (data) => {
-      console.log('Received timer-update:', data)
       if (data.roomId === room.value?.id) {
         timer.value = {
           id: data.id,
@@ -372,140 +189,86 @@ const setupSocketListeners = () => {
           isActive: data.isActive,
           isPaused: !data.isActive && data.duration > 0
         }
-        console.log('Updated timer from socket:', timer.value)
+        
+        // Update current timer name if available
+        if (data.title) {
+          currentTimerName.value = data.title
+        }
       }
     })
     
     socket.value.on('timer-finished', (data) => {
-      console.log('🏁 Timer finished received:', data)
-      console.log('🏁 Timer finished data details:', {
-        timerId: data.timerId,
-        title: data.title,
-        roomId: data.roomId,
-        completionMessage: data.completionMessage,
-        completionMessageType: typeof data.completionMessage,
-        completionMessageExists: !!data.completionMessage
-      })
-      
       if (data.roomId === room.value?.id) {
         timer.value.isActive = false
         timer.value.isPaused = false
         timer.value.remainingTime = 0
-        
-        // Show completion message if it exists
-        if (data.completionMessage) {
-          console.log('🎉 Showing completion message for public view:', data.completionMessage)
-          showTimerCompletionMessage({
-            completionMessage: data.completionMessage
-          })
-        } else {
-          console.log('🎉 No completion message to show for public view')
-        }
       }
     })
     
     // Handle real-time timer control events from admin
     socket.value.on('timer-started', (data) => {
-      console.log('🟢 Timer started via socket (public):', data)
-      console.log('🟢 Current room ID:', room.value?.id)
-      console.log('🟢 Data room ID:', data.roomId)
-      console.log('🟢 Room match check:', data.roomId === room.value?.id)
-      console.log('🟢 ShareToken match check:', data.roomId === room.value?.id || data.shareToken === route.params.shareToken)
-      
-      // Accept events if room ID matches OR if we don't have room ID yet (initial connection)
-      // TEMPORARY: Accept all events for debugging
-      if (data.roomId === room.value?.id || !room.value?.id || true) {
-        console.log('✅ Timer started event matches room (public), updating timer state')
+      if (data.roomId === room.value?.id || !room.value?.id) {
         timer.value.isActive = data.isActive
         timer.value.isPaused = false
         timer.value.remainingTime = data.remainingTime
-        // Start countdown if not already running
         if (data.isActive && !countdownInterval) {
-          console.log('✅ Starting countdown for timer (public)')
           startCountdown()
         }
-      } else {
-        console.log('❌ Timer started event does not match room (public)')
-        console.log('❌ Expected room ID:', room.value?.id)
-        console.log('❌ Received room ID:', data.roomId)
-        console.log('❌ ShareToken:', route.params.shareToken)
       }
     })
     
     socket.value.on('timer-paused', (data) => {
-      console.log('🟡 Timer paused via socket (public):', data)
-      console.log('🟡 Current room ID:', room.value?.id)
-      console.log('🟡 Data room ID:', data.roomId)
-      
-      // Accept events if room ID matches OR if we don't have room ID yet (initial connection)
-      // TEMPORARY: Accept all events for debugging
-      if (data.roomId === room.value?.id || !room.value?.id || true) {
-        console.log('✅ Timer paused event matches room (public), updating timer state')
+      if (data.roomId === room.value?.id || !room.value?.id) {
         timer.value.isActive = data.isActive
         timer.value.isPaused = data.isPaused
         timer.value.remainingTime = data.remainingTime
-        // Stop countdown
         stopCountdown()
-      } else {
-        console.log('❌ Timer paused event does not match room (public)')
       }
     })
     
     socket.value.on('timer-stopped', (data) => {
-      console.log('🔴 Timer stopped via socket (public):', data)
-      console.log('🔴 Current room ID:', room.value?.id)
-      console.log('🔴 Data room ID:', data.roomId)
-      
-      // Accept events if room ID matches OR if we don't have room ID yet (initial connection)
-      // TEMPORARY: Accept all events for debugging
-      if (data.roomId === room.value?.id || !room.value?.id || true) {
-        console.log('✅ Timer stopped event matches room (public), updating timer state')
+      if (data.roomId === room.value?.id || !room.value?.id) {
         timer.value.isActive = false
         timer.value.isPaused = false
         timer.value.remainingTime = 0
-        // Stop countdown
         stopCountdown()
-      } else {
-        console.log('❌ Timer stopped event does not match room (public)')
       }
     })
     
     socket.value.on('room-state', (data) => {
-      console.log('Received room-state:', data)
       if (data.id === room.value?.id) {
         room.value = data
         
-        // Handle the correct data structure: data.timers or data.room.timers
+        // Update room settings
+        showTimerName.value = data.showTimerName ?? true
+        
         const timers = data.timers || data.room?.timers || []
         
         if (timers.length > 0) {
-          // Get the most recent timer (last in array)
           const latestTimer = timers[timers.length - 1]
           
           let remainingTime = 0
           
           if (latestTimer.isActive) {
-            // Timer is running - calculate remaining time from endTimestamp
             const now = new Date().getTime()
             const endTime = new Date(latestTimer.endTimestamp).getTime()
             remainingTime = Math.max(0, Math.floor((endTime - now) / 1000))
           } else {
-            // Timer is not active - use duration field (convert from milliseconds to seconds)
             remainingTime = Math.floor(latestTimer.duration / 1000)
           }
           
-          const newTimerState = {
+          timer.value = {
             id: latestTimer.id,
             remainingTime: remainingTime,
             isActive: latestTimer.isActive,
             isPaused: !latestTimer.isActive && remainingTime > 0
           }
           
-          timer.value = newTimerState
-          console.log('Synced timer from room-state:', timer.value)
+          // Update current timer name
+          currentTimerName.value = latestTimer.title || 'Timer'
         } else {
-          // No timers in room
           timer.value = { id: null, remainingTime: 0, isActive: false, isPaused: false }
+          currentTimerName.value = ''
         }
       }
     })
@@ -524,55 +287,18 @@ const setupSocketListeners = () => {
     
     // Handle live message updates (for all users)
     socket.value.on('live-message-updated', (data) => {
-      console.log('📢 Live message updated for public view:', data)
-      console.log('📢 Current room ID:', room.value?.id)
-      console.log('📢 Data room ID:', data.roomId)
-      console.log('📢 Room match:', data.roomId === room.value?.id)
-      
       if (data.roomId === room.value?.id) {
         currentLiveMessage.value = data.message || ''
-        console.log('✅ Live message received via socket for public view:', data.message)
-        console.log('✅ Current live message value:', currentLiveMessage.value)
-      } else {
-        console.log('❌ Live message room ID mismatch')
       }
     })
     
-    // Handle timer completion messages
-    socket.value.on('timer-completion-message', (data) => {
-      console.log('Timer completion message for public view:', data)
+    // Handle room setting changes
+    socket.value.on('room-setting-changed', (data) => {
       if (data.roomId === room.value?.id) {
-        showTimerCompletionMessage(data)
+        if (data.setting === 'showTimerName') {
+          showTimerName.value = data.value
+        }
       }
-    })
-    
-    // Test event listener for debugging
-    socket.value.on('test-event', (data) => {
-      console.log('🧪 TEST EVENT RECEIVED (PUBLIC):', data)
-    })
-    
-    // Connection debugging
-    socket.value.on('connect', () => {
-      console.log('🔌 PUBLIC ROOM: Socket connected!')
-      console.log('🔌 PUBLIC ROOM: Socket ID:', socket.value.id)
-    })
-    
-    socket.value.on('disconnect', () => {
-      console.log('🔌 PUBLIC ROOM: Socket disconnected!')
-    })
-    
-    socket.value.on('connect_error', (error) => {
-      console.error('🔌 PUBLIC ROOM: Socket connection error:', error)
-    })
-    
-    // Debug: Log ALL events received
-    socket.value.onAny((eventName, ...args) => {
-      console.log('🔍 PUBLIC ROOM: Received event:', eventName, args)
-    })
-    
-    // Test if socket can receive any events at all
-    socket.value.on('pong', (data) => {
-      console.log('🏓 PONG received:', data)
     })
   }
 }
@@ -613,7 +339,6 @@ watch(() => timer.value.isActive, (isActive) => {
 // Handle page visibility changes (navigation away/back)
 const handleVisibilityChange = () => {
   if (document.visibilityState === 'visible') {
-    console.log('Page became visible, syncing state...')
     // User came back to the page, sync state
     if (socket.value && socket.value.connected) {
       socket.value.emit('request-sync')
@@ -644,8 +369,6 @@ onUnmounted(() => {
 
 // Initialize with proper state management
 onMounted(async () => {
-  console.log('Initializing public room page...')
-  
   // Add visibility change listener
   document.addEventListener('visibilitychange', handleVisibilityChange)
   
@@ -661,27 +384,18 @@ onMounted(async () => {
   }
   
   // Then connect to socket and join room
-  console.log('🔌 PUBLIC ROOM: Starting socket connection...')
   await connect()
-  console.log('🔌 PUBLIC ROOM: Socket connected, setting up listeners...')
   setupSocketListeners()
   
   // Wait a bit for socket to be fully ready
   await new Promise(resolve => setTimeout(resolve, 500))
   
-  console.log('🔗 Joining room with shareToken:', route.params.shareToken)
   joinRoom({ shareToken: route.params.shareToken, userId: null })
-  console.log('🔌 PUBLIC ROOM: Socket setup complete')
   
   // Request fresh room state from server
   setTimeout(() => {
     if (socket.value) {
-      console.log('📡 Sending request-sync...')
       socket.value.emit('request-sync')
-      
-      // Test basic socket communication
-      console.log('🏓 Sending ping...')
-      socket.value.emit('ping', { test: 'frontend to backend' })
     }
   }, 1000)
   
@@ -700,3 +414,51 @@ useHead({
   title: computed(() => room.value ? `${room.value.name} - Live Timer` : 'Room - Live Timer')
 })
 </script>
+
+<style scoped>
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.5s ease-out;
+}
+
+/* Ensure full viewport height */
+.min-h-screen {
+  min-height: 100vh;
+  min-height: 100dvh; /* Dynamic viewport height for mobile */
+}
+
+/* Large timer text with proper scaling */
+.font-mono {
+  font-family: 'Courier New', 'Monaco', 'Menlo', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Responsive text sizing */
+@media (max-width: 768px) {
+  .text-9xl {
+    font-size: 8rem !important;
+  }
+  .text-8xl {
+    font-size: 6rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .text-9xl {
+    font-size: 6rem !important;
+  }
+  .text-8xl {
+    font-size: 4rem !important;
+  }
+}
+</style>

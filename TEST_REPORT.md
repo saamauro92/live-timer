@@ -173,7 +173,7 @@ The Live Timer Server has been successfully tested and is running with all major
 | `timer-update` | ✅ | Real-time timer updates |
 | `timer-created` | ✅ | New timer notifications |
 | `timer-deleted` | ✅ | Timer deletion notifications |
-| `timer-finished` | ✅ | Timer completion notifications |
+| `timer-finished` | ✅ | Timer finished notifications |
 | `user-count` | ✅ | Connected users count |
 | `ping/pong` | ✅ | Connection health check |
 

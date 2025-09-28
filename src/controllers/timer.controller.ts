@@ -15,8 +15,7 @@ const createTimerSchema = z.object({
 const updateTimerSchema = z.object({
   title: z.string().min(1).max(200).optional(),
   description: z.string().optional(),
-  duration: z.number().min(1000).max(86400000).optional(),
-  completionMessage: z.string().max(500).optional()
+  duration: z.number().min(1000).max(86400000).optional()
 });
 
 export class TimerController {

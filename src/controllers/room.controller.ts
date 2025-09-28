@@ -11,7 +11,8 @@ const createRoomSchema = z.object({
 
 const updateRoomSchema = z.object({
   name: z.string().min(1).max(100).optional(),
-  description: z.string().optional()
+  description: z.string().optional(),
+  showTimerName: z.boolean().optional()
 });
 
 export class RoomController {
@@ -123,6 +124,18 @@ export class RoomController {
         return;
       }
 
+      // Broadcast room setting changes to all connected users
+      if (data.showTimerName !== undefined) {
+        const socketService = (global as any).socketService;
+        if (socketService) {
+          socketService.emitToRoom(id, 'room-setting-changed', {
+            roomId: id,
+            setting: 'showTimerName',
+            value: data.showTimerName
+          });
+        }
+      }
+
       const response: ApiResponse = {
         success: true,
         data: room,
@@ -201,6 +214,71 @@ export class RoomController {
       res.json(response);
     } catch (error) {
       logger.error('Error getting room stats:', error);
+      const response: ApiResponse = {
+        success: false,
+        message: 'Internal server error'
+      };
+      res.status(500).json(response);
+    }
+  }
+
+  async getRoomConnectionStats(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const socketService = (global as any).socketService;
+      
+      if (!socketService) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Socket service not available'
+        };
+        res.status(503).json(response);
+        return;
+      }
+      
+      const connectionStats = socketService.getRoomStats(id);
+      
+      const response: ApiResponse = {
+        success: true,
+        data: connectionStats
+      };
+      res.json(response);
+    } catch (error) {
+      logger.error('Error getting room connection stats:', error);
+      const response: ApiResponse = {
+        success: false,
+        message: 'Internal server error'
+      };
+      res.status(500).json(response);
+    }
+  }
+
+  async getAllConnectionsDebug(req: Request, res: Response): Promise<void> {
+    try {
+      const socketService = (global as any).socketService;
+      
+      if (!socketService) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Socket service not available'
+        };
+        res.status(503).json(response);
+        return;
+      }
+      
+      const allConnections = socketService.getAllConnections();
+      const allStats = socketService.getAllRoomStats();
+      
+      const response: ApiResponse = {
+        success: true,
+        data: {
+          connections: allConnections,
+          stats: allStats
+        }
+      };
+      res.json(response);
+    } catch (error) {
+      logger.error('Error getting all connections debug:', error);
       const response: ApiResponse = {
         success: false,
         message: 'Internal server error'

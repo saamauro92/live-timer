@@ -42,7 +42,7 @@ export default defineNuxtConfig({
         headers: {
           'Access-Control-Allow-Origin': process.env.NODE_ENV === 'production' 
             ? 'https://yourdomain.com' 
-            : 'http://localhost:3000',
+            : '*',
           'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
           'Access-Control-Allow-Headers': 'Content-Type, Authorization',
           'Access-Control-Allow-Credentials': 'true'

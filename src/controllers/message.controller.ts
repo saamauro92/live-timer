@@ -223,23 +223,6 @@ export class MessageController {
     }
   }
 
-  // Broadcast timer completion message
-  async broadcastTimerCompletion(timerId: string, roomId: string, message: string): Promise<void> {
-    try {
-      const socketService = (global as any).socketService;
-      if (socketService && message) {
-        socketService.emitToRoom(roomId, 'timer-completion-message', {
-          roomId,
-          timerId,
-          message,
-          timestamp: new Date().toISOString()
-        });
-        logger.info(`Timer completion message broadcasted: ${message}`);
-      }
-    } catch (error) {
-      logger.error('Error broadcasting timer completion message:', error);
-    }
-  }
 }
 
 export const messageController = new MessageController();

@@ -7,13 +7,23 @@ import { redisClient } from '../config/redis';
 import { roomService } from './room.service';
 import { timerService } from './timer.service';
 import { logger } from '../utils/logger';
-import { SocketData, JoinRoomData, RoomStats } from '../types';
+import { parseUserAgent, getFriendlyDisplayName } from '../utils/userAgent';
+import { 
+  SocketData, 
+  JoinRoomData, 
+  RoomStats, 
+  UserConnectionInfo, 
+  UserJoinedEvent, 
+  UserLeftEvent, 
+  UserCountUpdateEvent 
+} from '../types';
 
 const prisma = new PrismaClient();
 
 export class SocketService {
   private io: SocketServer;
   private roomConnections = new Map<string, Set<string>>(); // roomId -> Set of socketIds
+  private connectionDetails = new Map<string, UserConnectionInfo>(); // socketId -> ConnectionInfo
 
   constructor(server: Server) {
     logger.info('Initializing Socket.IO server...');
@@ -44,6 +54,42 @@ export class SocketService {
     this.setupAuthentication();
     this.setupEventHandlers();
     this.startExpiredTimerCleanup();
+  }
+
+  private createConnectionInfo(socket: Socket, userData?: any): UserConnectionInfo {
+    try {
+      const userAgent = socket.handshake.headers['user-agent'] || '';
+      const parsedUA = parseUserAgent(userAgent);
+      const ip = socket.handshake.address || socket.conn.remoteAddress || 'unknown';
+      
+      return {
+        socketId: socket.id,
+        userId: userData?.id,
+        userAgent,
+        browser: parsedUA.browser,
+        os: parsedUA.os,
+        ip,
+        connectedAt: new Date(),
+        lastSeen: new Date(),
+        isOnline: true,
+        user: userData
+      };
+    } catch (error) {
+      logger.error('Error creating connection info:', error);
+      // Return fallback connection info
+      return {
+        socketId: socket.id,
+        userId: userData?.id,
+        userAgent: 'Unknown',
+        browser: 'Unknown',
+        os: 'Unknown',
+        ip: 'unknown',
+        connectedAt: new Date(),
+        lastSeen: new Date(),
+        isOnline: true,
+        user: userData
+      };
+    }
   }
 
   private setupAuthentication(): void {
@@ -159,16 +205,21 @@ export class SocketService {
           // Get user ID from authenticated socket data or from request
           const userId = socketData.user?.id || data.userId;
 
+          // Create detailed connection info
+          const connectionInfo = this.createConnectionInfo(socket, socketData.user);
+          
           // Store connection data
           socketData.roomId = room.id;
           socketData.userId = userId;
           socketData.isAdmin = userId === room.ownerId;
+          socketData.connectionInfo = connectionInfo;
 
           // Track connection
           if (!this.roomConnections.has(roomKey)) {
             this.roomConnections.set(roomKey, new Set());
           }
           this.roomConnections.get(roomKey)!.add(socket.id);
+          this.connectionDetails.set(socket.id, connectionInfo);
 
           // Send initial room state with all timers
           socket.emit('room-state', {
@@ -176,9 +227,26 @@ export class SocketService {
             isAdmin: socketData.isAdmin
           });
 
-          // Broadcast user count to all room members
+          // Broadcast user count and connection details to all room members
           const userCount = this.roomConnections.get(roomKey)!.size;
+          const connections = this.getRoomConnections(room.id);
+          
+          const userJoinedEvent: UserJoinedEvent = {
+            roomId: room.id,
+            connection: connectionInfo,
+            totalUsers: userCount
+          };
+          
+          const userCountUpdate: UserCountUpdateEvent = {
+            roomId: room.id,
+            count: userCount,
+            connections
+          };
+          
+          logger.info(`Broadcasting user-count: ${userCount} to room: ${roomKey}`);
           this.io.to(roomKey).emit('user-count', userCount);
+          this.io.to(roomKey).emit('user-joined', userJoinedEvent);
+          this.io.to(roomKey).emit('user-count-update', userCountUpdate);
 
           // Send a test event to verify the connection works
           socket.emit('test-event', {
@@ -231,15 +299,42 @@ export class SocketService {
           if (connections) {
             connections.delete(socket.id);
             
+            // Leave the room
+            socket.leave(roomKey);
+            
+            // Get updated connection details
+            const updatedConnections = this.getRoomConnections(socketData.roomId);
+            
+            // Broadcast user left event
+            const userLeftEvent: UserLeftEvent = {
+              roomId: socketData.roomId,
+              socketId: socket.id,
+              totalUsers: connections.size
+            };
+            
+            const userCountUpdate: UserCountUpdateEvent = {
+              roomId: socketData.roomId,
+              count: connections.size,
+              connections: updatedConnections
+            };
+            
             // Update user count
+            logger.info(`Broadcasting user-count: ${connections.size} to room: ${roomKey} (disconnect)`);
             this.io.to(roomKey).emit('user-count', connections.size);
+            this.io.to(roomKey).emit('user-left', userLeftEvent);
+            this.io.to(roomKey).emit('user-count-update', userCountUpdate);
             
             // Clean up empty rooms
             if (connections.size === 0) {
               this.roomConnections.delete(roomKey);
             }
+            
+            logger.info(`User left room ${socketData.roomId}, ${connections.size} users remaining`);
           }
         }
+        
+        // Clean up connection details
+        this.connectionDetails.delete(socket.id);
         
         logger.info(`Client disconnected: ${socket.id}`);
       });
@@ -274,10 +369,31 @@ export class SocketService {
   public getRoomStats(roomId: string): RoomStats {
     const roomKey = `room:${roomId}`;
     const connections = this.roomConnections.get(roomKey);
+    const connectionDetails = this.getRoomConnections(roomId);
+    
     return {
       connectedUsers: connections ? connections.size : 0,
-      isActive: connections ? connections.size > 0 : false
+      isActive: connections ? connections.size > 0 : false,
+      connections: connectionDetails
     };
+  }
+
+  // Get detailed connection information for a room
+  private getRoomConnections(roomId: string): UserConnectionInfo[] {
+    const roomKey = `room:${roomId}`;
+    const socketIds = this.roomConnections.get(roomKey);
+    
+    if (!socketIds) {
+      return [];
+    }
+    
+    return Array.from(socketIds)
+      .map(socketId => this.connectionDetails.get(socketId))
+      .filter((info): info is UserConnectionInfo => info !== undefined)
+      .map(info => ({
+        ...info,
+        lastSeen: new Date() // Update last seen time
+      }));
   }
 
   // Get all room statistics
@@ -293,6 +409,15 @@ export class SocketService {
     return stats;
   }
 
+  // Debug method to get all connections
+  public getAllConnections(): Record<string, string[]> {
+    const connections: Record<string, string[]> = {};
+    this.roomConnections.forEach((socketIds, roomKey) => {
+      connections[roomKey] = Array.from(socketIds);
+    });
+    return connections;
+  }
+
   // Start background task to clean up expired timers
   private startExpiredTimerCleanup(): void {
     setInterval(async () => {
@@ -301,34 +426,12 @@ export class SocketService {
         for (const timer of expiredTimers) {
           await timerService.markAsExpired(timer.id);
           
-          // Debug: Log timer completion message
-          logger.info(`=== TIMER COMPLETION DEBUG ===`);
-          logger.info(`Timer ID: ${timer.id}`);
-          logger.info(`Timer title: ${timer.title}`);
-          logger.info(`Completion message: ${timer.completionMessage}`);
-          logger.info(`Completion message type: ${typeof timer.completionMessage}`);
-          logger.info(`Completion message exists: ${!!timer.completionMessage}`);
-          
-          // Send timer-finished event with completion message
+          // Send timer-finished event
           this.emitToRoom(timer.roomId, 'timer-finished', {
             timerId: timer.id,
             title: timer.title,
-            roomId: timer.roomId,
-            completionMessage: timer.completionMessage
+            roomId: timer.roomId
           });
-          
-          // Also send completion message event if there's a message
-          if (timer.completionMessage) {
-            this.emitToRoom(timer.roomId, 'timer-completion-message', {
-              roomId: timer.roomId,
-              timerId: timer.id,
-              message: timer.completionMessage,
-              timestamp: new Date().toISOString()
-            });
-            logger.info(`Timer completion message broadcasted: ${timer.completionMessage}`);
-          } else {
-            logger.info(`No completion message to broadcast for timer ${timer.id}`);
-          }
           
           logger.info(`Timer ${timer.id} expired and marked as inactive`);
         }

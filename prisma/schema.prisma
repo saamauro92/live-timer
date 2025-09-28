@@ -91,13 +91,14 @@ model Subscription {
 
 // Timer application models
 model Room {
-  id          String   @id @default(uuid()) @db.Uuid
-  name        String   @db.VarChar(100)
-  description String?  @db.Text
-  shareToken  String   @unique @default(uuid()) @db.Uuid
-  ownerId     String   @db.Uuid
-  createdAt   DateTime @default(now()) @db.Timestamptz
-  updatedAt   DateTime @updatedAt @db.Timestamptz
+  id             String   @id @default(uuid()) @db.Uuid
+  name           String   @db.VarChar(100)
+  description    String?  @db.Text
+  shareToken     String   @unique @default(uuid()) @db.Uuid
+  ownerId        String   @db.Uuid
+  showTimerName  Boolean  @default(true) // Whether to show timer name in public display
+  createdAt      DateTime @default(now()) @db.Timestamptz
+  updatedAt      DateTime @updatedAt @db.Timestamptz
   
   owner    User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   timers   Timer[]
@@ -119,7 +120,6 @@ model Timer {
   duration       Int      // milliseconds
   isActive       Boolean  @default(false)
   order          Int      @default(0) // For ordering timers in the room
-  completionMessage String? @db.Text // Custom message to show when timer finishes
   createdAt      DateTime @default(now()) @db.Timestamptz
   
   room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
@@ -135,7 +135,7 @@ model RoomMessage {
   id          String   @id @default(uuid()) @db.Uuid
   roomId      String   @db.Uuid
   message     String   @db.Text
-  messageType String   @default("live") // "live" or "completion"
+  messageType String   @default("live") // "live"
   isActive    Boolean  @default(true)
   expiresAt   DateTime? @db.Timestamptz // For temporary messages
   createdAt   DateTime @default(now()) @db.Timestamptz

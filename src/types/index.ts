@@ -4,6 +4,7 @@ export interface Room {
   description?: string;
   shareToken: string;
   ownerId: string;
+  showTimerName?: boolean;
   createdAt: Date;
   updatedAt: Date;
   timers?: Timer[];
@@ -25,6 +26,7 @@ export interface CreateRoomData {
   name: string;
   description?: string;
   ownerId: string;
+  showTimerName?: boolean;
 }
 
 export interface CreateTimerData {
@@ -39,10 +41,30 @@ export interface TimerAction {
   action: 'start' | 'pause' | 'reset';
 }
 
+export interface UserConnectionInfo {
+  socketId: string;
+  userId?: string;
+  userAgent?: string;
+  browser?: string;
+  os?: string;
+  ip?: string;
+  connectedAt: Date;
+  lastSeen: Date;
+  isOnline: boolean;
+  user?: {
+    id: string;
+    email: string;
+    name: string;
+    role?: string;
+    emailVerified: boolean;
+  };
+}
+
 export interface SocketData {
   userId?: string;
   roomId?: string;
   isAdmin?: boolean;
+  connectionInfo?: UserConnectionInfo;
   user?: {
     id: string;
     email: string;
@@ -74,6 +96,7 @@ export interface JwtPayload {
 export interface RoomStats {
   connectedUsers: number;
   isActive: boolean;
+  connections?: UserConnectionInfo[];
 }
 
 export interface TimerUpdateEvent {
@@ -91,4 +114,22 @@ export interface RoomStateEvent {
   ownerId: string;
   timers: Timer[];
   isAdmin: boolean;
+}
+
+export interface UserJoinedEvent {
+  roomId: string;
+  connection: UserConnectionInfo;
+  totalUsers: number;
+}
+
+export interface UserLeftEvent {
+  roomId: string;
+  socketId: string;
+  totalUsers: number;
+}
+
+export interface UserCountUpdateEvent {
+  roomId: string;
+  count: number;
+  connections: UserConnectionInfo[];
 }

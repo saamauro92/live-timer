@@ -1,180 +1,307 @@
 <template>
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <!-- Room Header -->
-    <div class="mb-8">
+  <div class="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-gray-900 dark:to-gray-800">
+    <!-- Modern Header -->
+    <div class="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200/50 dark:border-gray-700/50 sticky top-0 z-40">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
       <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-4">
+            <NuxtLink to="/rooms" class="flex items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+              <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+              </svg>
+              Back to Rooms
+            </NuxtLink>
+            <div class="h-6 w-px bg-gray-300 dark:bg-gray-600"></div>
         <div>
-          <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ room?.name }}</h1>
-          <p class="text-gray-600 dark:text-gray-300 mt-2">{{ room?.description }}</p>
-          <div class="flex items-center mt-2 text-sm text-gray-500 dark:text-gray-400">
-            <span>Room Code: {{ room?.shareToken }}</span>
+              <h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
+                <svg class="w-6 h-6 mr-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                </svg>
+                {{ room?.name }}
+              </h1>
+              <p class="text-gray-600 dark:text-gray-300 text-sm mt-1">{{ room?.description }}</p>
+            </div>
+          </div>
+          <div class="flex items-center space-x-3">
+            <div class="flex items-center space-x-2 bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded-lg">
+              <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+              </svg>
+              <span class="text-sm font-mono text-gray-700 dark:text-gray-300">{{ room?.shareToken }}</span>
             <button 
               @click="copyRoomCode"
-              class="ml-2 text-blue-600 hover:text-blue-800"
+                class="text-blue-600 hover:text-blue-800 transition-colors"
+                title="Copy room code"
             >
-              Copy
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                </svg>
             </button>
           </div>
-        </div>
-        <div class="flex space-x-2">
           <button 
             @click="shareRoom"
-            class="btn-secondary"
+              class="btn-secondary flex items-center"
           >
-            Share Room
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"></path>
+              </svg>
+              Share
           </button>
           <button 
             @click="leaveRoom"
-            class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg"
+              class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center transition-colors"
           >
-            Leave Room
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+              </svg>
+              Leave
           </button>
+          </div>
         </div>
       </div>
     </div>
 
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <!-- Two Column Layout -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      <!-- Left Column: Timer Creation (Smaller) -->
-      <div class="lg:col-span-1">
-        <div class="card p-6 mb-6">
-          <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-6">Create Timer</h3>
+        <!-- Left Column: Timer Creation & Live Viewers -->
+        <div class="lg:col-span-1 space-y-6">
+          <!-- Live Preview Section -->
+          <div class="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-gray-700/50 shadow-lg">
+            <!-- Header -->
+            <div class="bg-gray-100 dark:bg-gray-700 px-4 py-3 rounded-t-2xl border-b border-gray-200 dark:border-gray-600">
+              <div class="flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+                  <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                  </svg>
+                  Live Preview
+                </h3>
+                <div class="flex items-center space-x-2">
+                  <div class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                  <span class="text-xs font-medium text-gray-600 dark:text-gray-400">LIVE</span>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Preview Content -->
+            <div class="p-4">
+              <div class="bg-gray-900 rounded-lg p-4 min-h-[200px] relative overflow-hidden">
+                <!-- Simulated viewer interface -->
+                <div class="text-center">
+                  <div class="mb-4">
+                    <h4 class="text-white text-lg font-bold">{{ room?.name }}</h4>
+                    <p class="text-gray-400 text-sm">{{ room?.description }}</p>
+                  </div>
+                  
+                  <!-- Live timers display -->
+                  <div v-if="timers.length > 0" class="space-y-3">
+                    <div 
+                      v-for="timer in timers.slice(0, 2)" 
+                      :key="timer.id"
+                      class="bg-gray-800 rounded-lg p-3 border border-gray-700"
+                    >
+                      <div class="text-white font-semibold text-sm mb-1">{{ timer.title }}</div>
+                      <div class="text-2xl font-mono font-bold text-green-400 mb-2">
+                        {{ formatTime(timer.remainingTime) }}
+                      </div>
+                      <div class="flex items-center justify-center">
+                        <div v-if="timer.isActive" class="flex items-center text-green-400">
+                          <div class="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
+                          <span class="text-xs">Running</span>
+                        </div>
+                        <div v-else-if="timer.isPaused" class="flex items-center text-yellow-400">
+                          <div class="w-2 h-2 bg-yellow-400 rounded-full mr-2"></div>
+                          <span class="text-xs">Paused</span>
+                        </div>
+                        <div v-else class="flex items-center text-gray-400">
+                          <div class="w-2 h-2 bg-gray-400 rounded-full mr-2"></div>
+                          <span class="text-xs">Ready</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- No timers state -->
+                  <div v-else class="text-center py-8">
+                    <div class="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                      </svg>
+                    </div>
+                    <p class="text-gray-400 text-sm">No active timers</p>
+                  </div>
+                  
+                  <!-- Live message display -->
+                  <div v-if="currentLiveMessage" class="mt-4 p-3 bg-blue-900/50 border border-blue-700 rounded-lg">
+                    <div class="flex items-center mb-2">
+                      <div class="w-2 h-2 bg-blue-400 rounded-full mr-2 animate-pulse"></div>
+                      <span class="text-blue-400 text-xs font-medium">Live Message</span>
+                    </div>
+                    <p class="text-white text-sm">{{ currentLiveMessage }}</p>
+                  </div>
+                </div>
+                
+                <!-- Overlay with connection info -->
+                <div class="absolute top-2 right-2 bg-black/50 backdrop-blur-sm rounded-lg px-2 py-1">
+                  <div class="flex items-center space-x-2">
+                    <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                    <span class="text-white text-xs">{{ liveViewerCount }} viewers</span>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Share link info -->
+              <div class="mt-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-sm font-medium text-gray-900 dark:text-white">Share Link</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Viewers see this interface</p>
+                  </div>
+                  <button 
+                    @click="copyShareLink"
+                    class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                    title="Copy share link"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Create Timer Section -->
+          <div class="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-gray-700/50 shadow-lg">
+            <!-- Header -->
+            <div class="bg-gray-100 dark:bg-gray-700 px-4 py-3 rounded-t-2xl border-b border-gray-200 dark:border-gray-600">
+              <div class="flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Create Timer</h3>
+                <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+              </div>
+            </div>
+            
+            <!-- Content -->
+            <div class="p-6">
           
           <!-- Timer Creation Form - Only for authenticated users -->
           <div v-if="isAuthenticated">
-            <div class="mb-6">
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Timer Name
+                <!-- Timer Name Input -->
+                <div class="mb-4">
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center">
+                    <span class="mr-2">Timer Name</span>
+                    <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
               </label>
               <input
                 v-model="newTimer.title"
                 type="text"
-                class="input-field w-full"
+                    class="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-sm"
                 placeholder="Enter timer name"
               />
             </div>
 
-            <!-- Preset Duration Buttons -->
-            <div class="mb-6">
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                Quick Presets
+                <!-- Duration Input - Image Style -->
+                <div class="mb-4">
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center">
+                    <span class="mr-2">Duration</span>
+                    <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
               </label>
-              <div class="grid grid-cols-2 gap-3">
-                <button 
-                  @click="setPresetDuration(5)"
-                  :class="['btn-secondary text-sm py-2', { 'bg-blue-500 text-white': newTimer.duration === 5 * 60 }]"
-                >
-                  5 min
-                </button>
-                <button 
-                  @click="setPresetDuration(10)"
-                  :class="['btn-secondary text-sm py-2', { 'bg-blue-500 text-white': newTimer.duration === 10 * 60 }]"
-                >
-                  10 min
-                </button>
-                <button 
-                  @click="setPresetDuration(60)"
-                  :class="['btn-secondary text-sm py-2', { 'bg-blue-500 text-white': newTimer.duration === 60 * 60 }]"
-                >
-                  1 hour
-                </button>
-                <button 
-                  @click="showCustomDuration = !showCustomDuration"
-                  :class="['btn-secondary text-sm py-2', { 'bg-blue-500 text-white': showCustomDuration }]"
-                >
-                  Custom
-                </button>
-              </div>
-            </div>
-
-            <!-- Custom Duration Input -->
-            <div v-if="showCustomDuration" class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600">
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                Custom Duration
-              </label>
-              
-              <!-- Time Input with Better UX -->
-              <div class="space-y-3">
-                <div class="flex items-center space-x-3">
-                  <div class="flex-1">
-                    <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Minutes</label>
+                  
+                  <!-- HH:MM:SS Input -->
+                  <div class="flex items-center space-x-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg p-2">
                     <input
-                      v-model.number="customMinutes"
+                      v-model.number="durationHours"
                       type="number"
                       min="0"
-                      max="1440"
-                      class="input-field w-full text-center text-lg font-mono"
-                      placeholder="0"
+                      max="23"
+                      class="w-12 text-center text-sm font-mono bg-transparent border-none focus:outline-none text-gray-900 dark:text-white"
+                      placeholder="00"
                     />
-                  </div>
-                  <div class="text-2xl text-gray-400">:</div>
-                  <div class="flex-1">
-                    <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Seconds</label>
+                    <span class="text-gray-400 font-mono">:</span>
                     <input
-                      v-model.number="customSeconds"
+                      v-model.number="durationMinutes"
                       type="number"
                       min="0"
                       max="59"
-                      class="input-field w-full text-center text-lg font-mono"
-                      placeholder="0"
+                      class="w-12 text-center text-sm font-mono bg-transparent border-none focus:outline-none text-gray-900 dark:text-white"
+                      placeholder="10"
                     />
-                  </div>
+                    <span class="text-gray-400 font-mono">:</span>
+                    <input
+                      v-model.number="durationSeconds"
+                      type="number"
+                      min="0"
+                      max="59"
+                      class="w-12 text-center text-sm font-mono bg-transparent border-none focus:outline-none text-gray-900 dark:text-white"
+                      placeholder="00"
+                    />
                 </div>
                 
-                <!-- Quick Duration Buttons -->
-                <div class="flex flex-wrap gap-2">
+                  <!-- Quick Preset Buttons -->
+                  <div class="flex flex-wrap gap-2 mt-3">
                   <button 
-                    v-for="preset in customPresets" 
-                    :key="preset.label"
-                    @click="setCustomPreset(preset.minutes, preset.seconds)"
-                    class="text-xs px-3 py-1 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-full transition-colors"
-                  >
-                    {{ preset.label }}
-                  </button>
-                </div>
-                
-                <!-- Total Duration Display -->
-                <div class="text-center">
-                  <div class="text-sm text-gray-500 dark:text-gray-400">Total Duration</div>
-                  <div class="text-xl font-mono font-bold text-gray-900 dark:text-white">
-                    {{ formatCustomDuration() }}
-                  </div>
-                </div>
-                
-                <!-- Action Buttons -->
-                <div class="flex space-x-2">
-                  <button 
-                    @click="setCustomDuration"
-                    :disabled="!isValidCustomDuration"
-                    class="btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Set Timer
+                      @click="setPresetDuration(5)"
+                      class="px-3 py-1 text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full transition-colors"
+                    >
+                      5m
                   </button>
                   <button 
-                    @click="showCustomDuration = false"
-                    class="btn-secondary"
+                      @click="setPresetDuration(10)"
+                      class="px-3 py-1 text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full transition-colors"
                   >
-                    Cancel
+                      10m
                   </button>
-                </div>
+                  <button 
+                      @click="setPresetDuration(25)"
+                      class="px-3 py-1 text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full transition-colors"
+                    >
+                      25m
+                    </button>
+                    <button 
+                      @click="setPresetDuration(60)"
+                      class="px-3 py-1 text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full transition-colors"
+                    >
+                      1h
+                  </button>
               </div>
             </div>
 
-            <!-- Create Timer Button -->
+                <!-- Action Buttons -->
+                <div class="flex justify-end space-x-3 pt-4">
+                  <button 
+                    @click="resetTimerForm"
+                    class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium transition-colors hover:bg-gray-200 dark:hover:bg-gray-600"
+                  >
+                    Cancel
+                  </button>
             <button 
               @click="createTimer"
-              :disabled="!newTimer.title || !newTimer.duration"
-              class="btn-primary w-full py-3 text-lg"
+                    :disabled="!newTimer.title || !getTotalDuration()"
+                    class="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Create Timer
+                    Save
             </button>
+                </div>
           </div>
           
           <!-- Public viewer message -->
-          <div v-else class="text-center">
+              <div v-else class="text-center p-6 bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-800 dark:to-gray-700 rounded-xl border border-gray-200 dark:border-gray-600">
+              <div class="w-16 h-16 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                </svg>
+              </div>
             <p class="text-gray-600 dark:text-gray-400 mb-4">
               You're viewing this room as a guest. 
-              <NuxtLink to="/login" class="text-blue-600 hover:text-blue-800 underline">
+                  <NuxtLink to="/login" class="text-blue-600 hover:text-blue-800 underline font-medium">
                 Sign in
               </NuxtLink> 
               to create timers.
@@ -183,47 +310,147 @@
         </div>
       </div>
 
-      <!-- Right Column: Timer List (Larger) -->
-      <div class="lg:col-span-2">
-        <div class="card p-6">
+          <!-- Live Viewers Section -->
+          <div class="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-gray-700/50 p-6 shadow-lg">
+            <div class="flex items-center mb-4">
+              <div class="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center mr-3">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                </svg>
+              </div>
+              <h3 class="text-xl font-bold text-gray-900 dark:text-white">Live Viewers</h3>
+            </div>
+            
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center space-x-2">
+                <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ liveViewerCount }} online</span>
+              </div>
+            </div>
+            
+            <div v-if="liveViewerCount === 0" class="text-center py-6">
+              <div class="w-12 h-12 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                <svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                </svg>
+              </div>
+              <p class="text-gray-500 dark:text-gray-400 text-sm">No viewers yet</p>
+            </div>
+            
+            <div v-else class="space-y-3 max-h-48 overflow-y-auto">
+              <div 
+                v-for="connection in liveConnections" 
+                :key="connection.socketId"
+                class="flex items-center space-x-3 p-3 bg-white/50 dark:bg-gray-700/50 rounded-xl border border-gray-200/50 dark:border-gray-600/50"
+              >
+                <div class="relative">
+                  <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                    <span class="text-sm font-bold text-white">
+                      {{ connection.user?.name?.charAt(0) || 'G' }}
+                    </span>
+                  </div>
+                  <div class="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full animate-pulse"></div>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="font-medium text-gray-900 dark:text-white truncate">
+                    {{ connection.user?.name || 'Guest User' }}
+                  </p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 truncate">
+                    {{ connection.browser }} • {{ connection.os }}
+                  </p>
+                  <p class="text-xs text-gray-400 dark:text-gray-500 truncate">
+                    Connected {{ formatConnectionTime(connection.connectedAt) }}
+                  </p>
+                </div>
+                <div class="flex items-center text-green-600 dark:text-green-400">
+                  <div class="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse"></div>
+                  <span class="text-xs font-medium">Live</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Timer List & Broadcast -->
+        <div class="lg:col-span-2 space-y-6">
+          <!-- Timers Section -->
+          <div class="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-gray-700/50 p-6 shadow-lg">
           <div class="flex items-center justify-between mb-6">
-            <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Room Timers</h3>
+              <div class="flex items-center">
+                <div class="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-600 rounded-xl flex items-center justify-center mr-3">
+                  <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white">Room Timers</h3>
+              </div>
             
             <!-- Master Controls -->
-            <div v-if="isAuthenticated && timers.length > 0" class="flex items-center space-x-4">
-              <!-- Sync Mode Toggle -->
-              <div class="flex items-center space-x-2">
-                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Sync Mode:</label>
+              <div v-if="isAuthenticated && timers.length > 0" class="flex items-center space-x-6">
+              <!-- Show Timer Name Toggle -->
+                <div class="flex items-center space-x-3">
+                  <label class="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                    </svg>
+                    Show Timer Name
+                  </label>
                 <button 
-                  @click="toggleSynchronizedMode"
-                  :class="['relative inline-flex h-6 w-11 items-center rounded-full transition-colors', 
-                    synchronizedMode ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600']"
+                  @click="toggleShowTimerName"
+                    :class="['relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-200 shadow-inner', 
+                      showTimerName ? 'bg-gradient-to-r from-blue-500 to-indigo-600' : 'bg-gray-300 dark:bg-gray-600']"
                 >
                   <span 
-                    :class="['inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
+                      :class="['inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition-transform duration-200',
+                      showTimerName ? 'translate-x-6' : 'translate-x-1']"
+                  ></span>
+                </button>
+                  <span class="text-xs font-medium" :class="showTimerName ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500'">
+                    {{ showTimerName ? 'ON' : 'OFF' }}
+                  </span>
+              </div>
+
+              <!-- Sync Mode Toggle -->
+                <div class="flex items-center space-x-3">
+                  <label class="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    Sync Mode
+                  </label>
+                <button 
+                  @click="toggleSynchronizedMode"
+                    :class="['relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-200 shadow-inner', 
+                      synchronizedMode ? 'bg-gradient-to-r from-green-500 to-emerald-600' : 'bg-gray-300 dark:bg-gray-600']"
+                >
+                  <span 
+                      :class="['inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition-transform duration-200',
                       synchronizedMode ? 'translate-x-6' : 'translate-x-1']"
                   ></span>
                 </button>
-                <span class="text-xs text-gray-500">{{ synchronizedMode ? 'ON' : 'OFF' }}</span>
+                  <span class="text-xs font-medium" :class="synchronizedMode ? 'text-green-600 dark:text-green-400' : 'text-gray-500'">
+                    {{ synchronizedMode ? 'ON' : 'OFF' }}
+                  </span>
               </div>
 
               <!-- Master Play/Stop Controls (Music Player Style) -->
-              <div class="flex items-center space-x-3">
+                <div class="flex items-center space-x-4">
                 <!-- Play/Pause Button -->
                 <button 
                   @click="playSelectedTimer"
                   :disabled="!selectedTimerId"
-                  :class="['flex items-center justify-center w-12 h-12 rounded-full transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed',
+                    :class="['flex items-center justify-center w-14 h-14 rounded-full transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg transform hover:scale-105',
                     getPlayButtonClass()
                   ]"
                 >
-                  <svg v-if="getPlayButtonIcon() === 'play'" class="w-6 h-6 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                    <svg v-if="getPlayButtonIcon() === 'play'" class="w-7 h-7 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M8 5v14l11-7z"/>
                   </svg>
-                  <svg v-else-if="getPlayButtonIcon() === 'pause'" class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                    <svg v-else-if="getPlayButtonIcon() === 'pause'" class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
                   </svg>
-                  <svg v-else class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                    <svg v-else class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M8 5v14l11-7z"/>
                   </svg>
                 </button>
@@ -231,82 +458,111 @@
                 <!-- Stop Button -->
                 <button 
                   @click="stopAllTimers"
-                  class="flex items-center justify-center w-10 h-10 bg-red-600 hover:bg-red-700 text-white rounded-full transition-all duration-200 hover:scale-105"
+                    class="flex items-center justify-center w-12 h-12 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-full transition-all duration-200 shadow-lg transform hover:scale-105"
                 >
-                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M6 6h12v12H6z"/>
                   </svg>
                 </button>
 
                 <!-- Selected Timer Info -->
-                <div v-if="selectedTimerId" class="text-sm text-gray-600 dark:text-gray-400">
-                  <div class="font-medium">{{ getSelectedTimerName() }}</div>
-                  <div class="text-xs">{{ getSelectedTimerStatus() }}</div>
+                  <div v-if="selectedTimerId" class="text-sm">
+                    <div class="font-semibold text-gray-900 dark:text-white">{{ getSelectedTimerName() }}</div>
+                    <div class="text-xs text-gray-600 dark:text-gray-400">{{ getSelectedTimerStatus() }}</div>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Timer List -->
-          <div v-if="timers.length === 0" class="text-center py-12">
-            <div class="text-gray-500 dark:text-gray-400">
-              <svg class="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div v-if="timers.length === 0" class="text-center py-16">
+              <div class="w-20 h-20 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg class="w-10 h-10 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <p class="text-lg font-medium">No timers created yet</p>
-              <p class="text-sm">Create your first timer using the panel on the left</p>
             </div>
+              <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">No timers created yet</h3>
+              <p class="text-gray-600 dark:text-gray-400">Create your first timer using the panel on the left</p>
           </div>
 
-          <div v-else class="space-y-3">
+            <!-- Scrollable Timer List -->
+            <div v-else class="max-h-96 overflow-y-auto space-y-3 pr-2">
             <div 
               v-for="(timer, index) in timers" 
               :key="timer.id"
               @click="selectTimer(timer.id)"
-              :class="['timer-item p-4 rounded-lg border-2 cursor-pointer transition-all duration-200',
+                :class="['group relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 transform hover:scale-[1.02]',
                 selectedTimerId === timer.id 
-                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
-                  : 'border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-500'
+                    ? 'border-blue-500 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 shadow-lg' 
+                    : 'border-gray-200 dark:border-gray-600 bg-white/50 dark:bg-gray-700/50 hover:border-gray-300 dark:hover:border-gray-500 hover:shadow-md'
               ]"
             >
               <div class="flex items-center justify-between">
                 <div class="flex-1">
-                  <div class="flex items-center space-x-3">
+                    <div class="flex items-center space-x-4">
                     <!-- Selection Indicator -->
                     <div class="flex items-center">
-                      <div :class="['w-4 h-4 rounded-full border-2 flex items-center justify-center',
+                        <div :class="['w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200',
                         selectedTimerId === timer.id 
-                          ? 'border-blue-500 bg-blue-500' 
-                          : 'border-gray-300 dark:border-gray-600'
+                            ? 'border-blue-500 bg-blue-500 shadow-lg' 
+                            : 'border-gray-300 dark:border-gray-600 group-hover:border-blue-400'
                       ]">
-                        <div v-if="selectedTimerId === timer.id" class="w-2 h-2 bg-white rounded-full"></div>
+                          <div v-if="selectedTimerId === timer.id" class="w-2.5 h-2.5 bg-white rounded-full"></div>
                       </div>
                     </div>
                     
                     <!-- Timer Info -->
                     <div class="flex-1">
-                      <div class="flex items-center space-x-2">
-                        <h4 class="font-medium text-gray-900 dark:text-white">{{ timer.title }}</h4>
-                        <div v-if="synchronizedMode" class="text-xs bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded">
+                        <div class="flex items-center space-x-3 mb-2">
+                          <!-- Editable Timer Name -->
+                          <div v-if="editingTimerId === timer.id" class="flex-1">
+                            <input
+                              v-model="editingTimerName"
+                              @blur="saveTimerName(timer.id)"
+                              @keyup.enter="saveTimerName(timer.id)"
+                              @keyup.escape="cancelEditTimerName"
+                              class="w-full px-2 py-1 bg-white dark:bg-gray-800 border border-blue-500 rounded text-lg font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              ref="timerNameInput"
+                            />
+                          </div>
+                          <div v-else class="flex-1 flex items-center space-x-2">
+                            <h4 
+                              @click="startEditTimerName(timer.id, timer.title)"
+                              class="font-semibold text-gray-900 dark:text-white text-lg cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                              title="Click to edit timer name"
+                            >
+                              {{ timer.title }}
+                            </h4>
+                            <button
+                              @click="startEditTimerName(timer.id, timer.title)"
+                              class="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                              title="Edit timer name"
+                            >
+                              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                              </svg>
+                            </button>
+                          </div>
+                          <div v-if="synchronizedMode" class="text-xs bg-gradient-to-r from-blue-500 to-purple-600 text-white px-2 py-1 rounded-full font-medium">
                           #{{ index + 1 }}
                         </div>
                       </div>
-                      <div class="flex items-center space-x-4 mt-1">
-                        <div class="text-2xl font-mono font-bold text-gray-900 dark:text-white">
+                        <div class="flex items-center space-x-6">
+                          <div class="text-3xl font-mono font-bold text-gray-900 dark:text-white">
                           {{ formatTime(timer.remainingTime) }}
                         </div>
                         <div class="flex items-center space-x-2">
                           <div v-if="timer.isActive" class="flex items-center text-green-600 dark:text-green-400">
-                            <div class="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse"></div>
-                            <span class="text-sm">Running</span>
+                              <div class="w-3 h-3 bg-green-500 rounded-full mr-2 animate-pulse"></div>
+                              <span class="text-sm font-medium">Running</span>
                           </div>
                           <div v-else-if="timer.isPaused" class="flex items-center text-yellow-600 dark:text-yellow-400">
-                            <div class="w-2 h-2 bg-yellow-500 rounded-full mr-1"></div>
-                            <span class="text-sm">Paused</span>
+                              <div class="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
+                              <span class="text-sm font-medium">Paused</span>
                           </div>
                           <div v-else class="flex items-center text-gray-500 dark:text-gray-400">
-                            <div class="w-2 h-2 bg-gray-400 rounded-full mr-1"></div>
-                            <span class="text-sm">Stopped</span>
+                              <div class="w-3 h-3 bg-gray-400 rounded-full mr-2"></div>
+                              <span class="text-sm font-medium">Ready</span>
                           </div>
                         </div>
                       </div>
@@ -314,68 +570,69 @@
                   </div>
                 </div>
 
-                <!-- Delete Button (only action available) -->
+                  <!-- Delete Button -->
                 <div v-if="isAuthenticated" class="flex items-center">
                   <button 
                     @click.stop="deleteTimer(timer.id)"
-                    class="bg-red-600 hover:bg-red-700 text-white text-sm px-3 py-1 rounded"
+                      class="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white text-sm px-4 py-2 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-md"
                   >
+                      <div class="flex items-center">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
                     Delete
+                      </div>
                   </button>
-                </div>
-              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Admin Message Panel - Redesigned -->
-    <div v-if="isAuthenticated" class="card p-6 mb-6 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-900 border border-blue-200 dark:border-gray-700">
-      <div class="flex items-center space-x-2 mb-6">
-        <div class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-          <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+          <!-- Broadcast Live Message Section -->
+          <div v-if="isAuthenticated" class="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-gray-700/50 p-6 shadow-lg">
+            <div class="flex items-center mb-4">
+              <div class="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center mr-3">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
           </svg>
         </div>
-        <div>
-          <h3 class="text-xl font-bold text-gray-900 dark:text-white">Admin Control Panel</h3>
-          <p class="text-sm text-gray-600 dark:text-gray-400">Manage live messages and timer notifications</p>
-        </div>
+              <h3 class="text-xl font-bold text-gray-900 dark:text-white">Live Broadcast</h3>
       </div>
       
-      <!-- Live Message Section -->
-      <div class="mb-8">
-        <div class="flex items-center space-x-2 mb-4">
-          <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-          <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Live Broadcast</h4>
-        </div>
-        
-        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+            <div class="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-4 border border-green-200/50 dark:border-green-700/50">
           <div class="flex items-start space-x-3">
             <div class="flex-1">
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center">
+                    <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-2"></div>
                 Broadcast Message to All Viewers
               </label>
-              <div class="flex space-x-2">
+                  <div class="flex space-x-3">
                 <input
                   v-model="liveMessage"
                   type="text"
-                  class="input-field flex-1 text-lg"
+                      class="flex-1 px-4 py-3 bg-white/70 dark:bg-gray-700/70 border border-gray-200 dark:border-gray-600 rounded-xl text-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                   placeholder="Type your live message here..."
                 />
                 <button 
                   @click="updateLiveMessage"
                   :disabled="!liveMessage.trim()"
-                  class="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:scale-105"
-                >
-                  📢 Broadcast
+                      class="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-6 py-3 rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-105 shadow-lg"
+                    >
+                      <div class="flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                        </svg>
+                        Broadcast
+                      </div>
                 </button>
                 <button 
                   @click="clearLiveMessage"
-                  class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-medium transition-all duration-200 hover:scale-105"
+                      class="bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white px-4 py-3 rounded-xl font-medium transition-all duration-200 transform hover:scale-105 shadow-lg"
                 >
-                  🗑️ Clear
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                      </svg>
                 </button>
               </div>
               <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
@@ -384,131 +641,20 @@
             </div>
           </div>
         </div>
-      </div>
-
-      <!-- Timer Completion Messages Section -->
-      <div>
-        <div class="flex items-center space-x-2 mb-4">
-          <div class="w-2 h-2 bg-purple-500 rounded-full"></div>
-          <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Timer Completion Messages</h4>
-        </div>
-        
-        <div v-if="timers.length === 0" class="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 text-center">
-          <div class="text-gray-400 dark:text-gray-500 mb-2">
-            <svg class="w-12 h-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <p class="text-gray-500 dark:text-gray-400">No timers created yet</p>
-          <p class="text-sm text-gray-400 dark:text-gray-500">Create timers to set completion messages</p>
-        </div>
-        
-        <div v-else class="space-y-4">
-          <div 
-            v-for="timer in timers" 
-            :key="timer.id"
-            class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow duration-200"
-          >
-            <div class="flex items-center space-x-3">
-              <div class="w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
-                <span class="text-purple-600 dark:text-purple-400 font-bold text-sm">
-                  {{ timers.indexOf(timer) + 1 }}
-                </span>
-              </div>
-              
-              <div class="flex-1">
-                <div class="flex items-center space-x-2 mb-2">
-                  <h5 class="font-semibold text-gray-900 dark:text-white">{{ timer.title }}</h5>
-                  <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-1 rounded-full">
-                    {{ formatTime(timer.remainingTime) }}
-                  </span>
-                </div>
-                
-                <div class="flex space-x-2">
-                  <input
-                    v-model="timer.completionMessage"
-                    type="text"
-                    class="input-field flex-1"
-                    :placeholder="`Custom message when ${timer.title} finishes...`"
-                  />
-                  <button 
-                    @click="updateTimerCompletionMessage(timer.id, timer.completionMessage)"
-                    class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-105"
-                  >
-                    💾 Save
-                  </button>
-                </div>
-                
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  This message will show when the timer completes
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
 
     <!-- Live Message Display (for all users) -->
-    <div v-if="currentLiveMessage" class="card p-4 mb-6 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
-      <div class="flex items-center space-x-2">
-        <div class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-        <span class="text-sm font-medium text-blue-800 dark:text-blue-200">Live Message:</span>
+          <div v-if="currentLiveMessage" class="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl p-6 border border-blue-200/50 dark:border-blue-700/50 shadow-lg">
+            <div class="flex items-center space-x-3">
+              <div class="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+              <span class="text-sm font-semibold text-blue-800 dark:text-blue-200">Live Message:</span>
       </div>
-      <p class="text-blue-900 dark:text-blue-100 mt-1">{{ currentLiveMessage }}</p>
+            <p class="text-blue-900 dark:text-blue-100 mt-2 text-lg font-medium">{{ currentLiveMessage }}</p>
     </div>
-
-    <!-- Timer Completion Message Display -->
-    <div v-if="showCompletionMessage" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md mx-4 shadow-xl">
-        <div class="flex items-center space-x-2 mb-4">
-          <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-          <span class="text-lg font-semibold text-gray-900 dark:text-white">Timer Complete!</span>
-        </div>
-        <p class="text-gray-700 dark:text-gray-300 mb-4">{{ completionMessage }}</p>
-        <button 
-          @click="showCompletionMessage = false"
-          class="btn-primary w-full"
-        >
-          Continue
-        </button>
       </div>
-    </div>
-
-    <!-- Room Members -->
-    <div class="card p-6">
-      <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Room Members</h3>
-      <div v-if="members.length === 0" class="text-center py-8">
-        <p class="text-gray-500 dark:text-gray-400">No members in this room yet.</p>
-      </div>
-      <div v-else class="grid gap-3">
-        <div 
-          v-for="member in members" 
-          :key="member.id"
-          class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
-        >
-          <div class="flex items-center">
-            <div class="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mr-3">
-              <span class="text-sm font-medium text-blue-600 dark:text-blue-400">
-                {{ member.name.charAt(0) }}
-              </span>
             </div>
-            <div>
-              <p class="font-medium text-gray-900 dark:text-white">{{ member.name }}</p>
-              <p class="text-sm text-gray-500 dark:text-gray-400">{{ member.email }}</p>
             </div>
-          </div>
-          <div v-if="member.isOnline" class="flex items-center text-green-600 dark:text-green-400">
-            <div class="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-            <span class="text-sm">Online</span>
-          </div>
-          <div v-else class="flex items-center text-gray-500 dark:text-gray-400">
-            <div class="w-2 h-2 bg-gray-400 rounded-full mr-2"></div>
-            <span class="text-sm">Offline</span>
-          </div>
-        </div>
-      </div>
-    </div>
+
   </div>
 </template>
 
@@ -523,20 +669,25 @@ const { connect, joinRoom, leaveRoom: leaveRoomSocket, socket } = useSocket()
 const room = ref(null)
 const timers = ref([])
 const members = ref([])
+const liveViewerCount = ref(0)
+const liveConnections = ref([])
 
 // Timer creation form
 const newTimer = ref({
   title: '',
   duration: 0
 })
-const customMinutes = ref(25)
-const customSeconds = ref(0)
-const showCustomDuration = ref(false)
+const durationHours = ref(0)
+const durationMinutes = ref(10)
+const durationSeconds = ref(0)
 
 // Synchronized mode
 const synchronizedMode = ref(false)
 const selectedTimerId = ref(null)
 const currentPlayingTimerId = ref(null)
+
+// Show timer name in public display
+const showTimerName = ref(true)
 
 // Custom timer presets
 const customPresets = ref([
@@ -551,13 +702,31 @@ const customPresets = ref([
 // Message system
 const liveMessage = ref('')
 const currentLiveMessage = ref('')
-const showCompletionMessage = ref(false)
-const completionMessage = ref('')
+
+// Timer name editing
+const editingTimerId = ref(null)
+const editingTimerName = ref('')
 
 const formatTime = (seconds) => {
   const mins = Math.floor(seconds / 60)
   const secs = seconds % 60
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+}
+
+const formatConnectionTime = (connectedAt) => {
+  const now = new Date()
+  const connected = new Date(connectedAt)
+  const diffMs = now - connected
+  const diffMins = Math.floor(diffMs / 60000)
+  
+  if (diffMins < 1) return 'just now'
+  if (diffMins < 60) return `${diffMins}m ago`
+  
+  const diffHours = Math.floor(diffMins / 60)
+  if (diffHours < 24) return `${diffHours}h ago`
+  
+  const diffDays = Math.floor(diffHours / 24)
+  return `${diffDays}d ago`
 }
 
 const fetchRoom = async () => {
@@ -568,9 +737,13 @@ const fetchRoom = async () => {
     room.value = response.data.room
     members.value = response.data.members || []
     
+    // Load room settings
+    showTimerName.value = room.value?.showTimerName ?? true
+    
     // Debug: Log the share token
     console.log('Room shareToken:', room.value?.shareToken)
     console.log('Room ID:', room.value?.id)
+    console.log('Show Timer Name:', showTimerName.value)
     console.log('Full room data:', room.value)
   } catch (error) {
     console.error('Error fetching room:', error)
@@ -631,32 +804,32 @@ const fetchTimers = async () => {
 
 // Timer creation methods
 const setPresetDuration = (minutes) => {
-  newTimer.value.duration = minutes * 60
-  showCustomDuration.value = false
+  durationHours.value = 0
+  durationMinutes.value = minutes
+  durationSeconds.value = 0
+  updateTimerDuration()
 }
 
-const setCustomDuration = () => {
-  const totalSeconds = (customMinutes.value * 60) + customSeconds.value
-  newTimer.value.duration = totalSeconds
+const getTotalDuration = () => {
+  return (durationHours.value * 3600) + (durationMinutes.value * 60) + durationSeconds.value
 }
 
-// Custom timer UX methods
-const setCustomPreset = (minutes, seconds) => {
-  customMinutes.value = minutes
-  customSeconds.value = seconds
+const updateTimerDuration = () => {
+  newTimer.value.duration = getTotalDuration()
 }
 
-const formatCustomDuration = () => {
-  const totalSeconds = (customMinutes.value * 60) + customSeconds.value
-  const mins = Math.floor(totalSeconds / 60)
-  const secs = totalSeconds % 60
-  return `${mins}:${secs.toString().padStart(2, '0')}`
+const resetTimerForm = () => {
+  newTimer.value.title = ''
+  newTimer.value.duration = 0
+  durationHours.value = 0
+  durationMinutes.value = 10
+  durationSeconds.value = 0
 }
 
-const isValidCustomDuration = computed(() => {
-  const totalSeconds = (customMinutes.value * 60) + customSeconds.value
-  return totalSeconds > 0 && totalSeconds <= 86400 // Max 24 hours
-})
+// Watch for changes in duration inputs
+watch([durationHours, durationMinutes, durationSeconds], () => {
+  updateTimerDuration()
+}, { deep: true })
 
 // Music player style methods
 const getPlayButtonIcon = () => {
@@ -748,51 +921,7 @@ const clearLiveMessage = async () => {
   }
 }
 
-const updateTimerCompletionMessage = async (timerId, message) => {
-  if (!isAuthenticated.value) return
-  
-  try {
-    const config = useRuntimeConfig()
-    const token = useCookie('auth-token')
-    
-    const response = await $fetch(`${config.public.apiBase}/api/timers/${timerId}`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token.value}`,
-        'Content-Type': 'application/json'
-      },
-      body: { completionMessage: message || null }
-    })
-    
-    if (response.success) {
-      // Update local timer data
-      const timerIndex = timers.value.findIndex(t => t.id === timerId)
-      if (timerIndex !== -1) {
-        timers.value[timerIndex].completionMessage = message
-      }
-    }
-  } catch (error) {
-    console.error('Error updating timer completion message:', error)
-  }
-}
 
-const showTimerCompletionMessage = (timer) => {
-  console.log('🎉 Showing timer completion message:', timer)
-  if (timer.completionMessage) {
-    completionMessage.value = timer.completionMessage
-    showCompletionMessage.value = true
-    
-    console.log('🎉 Completion message displayed:', timer.completionMessage)
-    
-    // Auto-hide after 10 seconds
-    setTimeout(() => {
-      showCompletionMessage.value = false
-      console.log('🎉 Completion message auto-hidden')
-    }, 10000)
-  } else {
-    console.log('🎉 No completion message to show')
-  }
-}
 
 // Load current live message
 const loadCurrentLiveMessage = async () => {
@@ -808,39 +937,85 @@ const loadCurrentLiveMessage = async () => {
   }
 }
 
+const loadConnectionStats = async () => {
+  try {
+    const config = useRuntimeConfig()
+    const response = await $fetch(`${config.public.apiBase}/api/rooms/${route.params.id}/connections`)
+    
+    if (response?.success && response?.data) {
+      liveViewerCount.value = response.data.connectedUsers || 0
+      liveConnections.value = response.data.connections || []
+      console.log('Initial connection stats loaded:', response.data)
+    } else {
+      console.warn('Invalid response format for connection stats:', response)
+      liveViewerCount.value = 0
+      liveConnections.value = []
+    }
+  } catch (error) {
+    console.error('Error loading connection stats:', error)
+    // Set default values if API fails - graceful degradation
+    liveViewerCount.value = 0
+    liveConnections.value = []
+    
+    // Show user-friendly error message in development
+    if (process.dev) {
+      console.warn('Connection stats unavailable - using fallback values')
+    }
+  }
+}
+
 const createTimer = async () => {
   if (!isAuthenticated.value) {
     console.log('Timer creation requires authentication')
     return
   }
   
+  // Validate form data before sending
+  if (!newTimer.value.title || !newTimer.value.title.trim()) {
+    console.error('Timer title is required')
+    return
+  }
+  
+  if (!newTimer.value.duration || newTimer.value.duration <= 0) {
+    console.error('Timer duration must be greater than 0')
+    return
+  }
+  
+  const durationMs = newTimer.value.duration * 1000
+  if (durationMs < 1000 || durationMs > 86400000) {
+    console.error('Timer duration must be between 1 second and 24 hours')
+    return
+  }
+  
   try {
     const token = useCookie('auth-token')
+    const requestBody = {
+      title: newTimer.value.title.trim(),
+      description: `Timer created for ${room.value.name}`,
+      duration: durationMs
+    }
+    
+    console.log('Creating timer with data:', requestBody)
+    
     const response = await $fetch(`/api/rooms/${route.params.id}/timers`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token.value}`,
         'Content-Type': 'application/json'
       },
-      body: {
-        title: newTimer.value.title,
-        description: `Timer created for ${room.value.name}`,
-        duration: newTimer.value.duration * 1000 // Convert to milliseconds
-      }
+      body: requestBody
     })
     
     if (response.success) {
       // Reset form
-      newTimer.value = { title: '', duration: 0 }
-      showCustomDuration.value = false
-      customMinutes.value = 25
-      customSeconds.value = 0
+      resetTimerForm()
       
       // Refresh timers list
       await fetchTimers()
     }
   } catch (error) {
     console.error('Error creating timer:', error)
+    console.error('Error details:', error.data || error.message)
   }
 }
 
@@ -1029,6 +1204,41 @@ const stopAllTimers = async () => {
   }
 }
 
+// Show timer name toggle method
+const toggleShowTimerName = async () => {
+  showTimerName.value = !showTimerName.value
+  
+  // Save the setting to the room
+  try {
+    const token = useCookie('auth-token')
+    const response = await $fetch(`/api/rooms/${route.params.id}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token.value}`,
+        'Content-Type': 'application/json'
+      },
+      body: {
+        showTimerName: showTimerName.value
+      }
+    })
+    
+    if (response.success) {
+      // Broadcast the setting change to all connected users
+      if (socket.value) {
+        socket.value.emit('room-setting-changed', {
+          roomId: route.params.id,
+          setting: 'showTimerName',
+          value: showTimerName.value
+        })
+      }
+    }
+  } catch (error) {
+    console.error('Error updating show timer name setting:', error)
+    // Revert the change if it failed
+    showTimerName.value = !showTimerName.value
+  }
+}
+
 // Synchronized mode methods
 const toggleSynchronizedMode = () => {
   synchronizedMode.value = !synchronizedMode.value
@@ -1118,6 +1328,68 @@ const shareRoom = () => {
   alert(`Room shared! URL copied to clipboard: ${shareUrl}`)
 }
 
+const copyShareLink = () => {
+  const shareUrl = `${window.location.origin}/room/${room.value.shareToken}`
+  navigator.clipboard.writeText(shareUrl)
+  // You could add a toast notification here instead of alert
+  console.log('Share link copied to clipboard:', shareUrl)
+}
+
+// Timer name editing methods
+const startEditTimerName = (timerId, currentName) => {
+  if (!isAuthenticated.value) return
+  
+  editingTimerId.value = timerId
+  editingTimerName.value = currentName
+  
+  // Focus the input field after the DOM updates
+  nextTick(() => {
+    const input = document.querySelector(`input[ref="timerNameInput"]`)
+    if (input) {
+      input.focus()
+      input.select()
+    }
+  })
+}
+
+const saveTimerName = async (timerId) => {
+  if (!isAuthenticated.value || !editingTimerName.value.trim()) {
+    cancelEditTimerName()
+    return
+  }
+  
+  try {
+    const token = useCookie('auth-token')
+    const response = await $fetch(`/api/timers/${timerId}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token.value}`,
+        'Content-Type': 'application/json'
+      },
+      body: {
+        title: editingTimerName.value.trim()
+      }
+    })
+    
+    if (response.success) {
+      // Update the timer in the local array
+      const timerIndex = timers.value.findIndex(t => t.id === timerId)
+      if (timerIndex !== -1) {
+        timers.value[timerIndex].title = editingTimerName.value.trim()
+      }
+    }
+  } catch (error) {
+    console.error('Error updating timer name:', error)
+  } finally {
+    cancelEditTimerName()
+  }
+}
+
+const cancelEditTimerName = () => {
+  editingTimerId.value = null
+  editingTimerName.value = ''
+}
+
 const leaveRoom = async () => {
   if (confirm('Are you sure you want to leave this room?')) {
     try {
@@ -1166,14 +1438,6 @@ const setupSocketListeners = () => {
     // Handle timer completion
     socket.value.on('timer-finished', (data) => {
       console.log('Timer finished:', data)
-      console.log('Timer finished data details:', {
-        timerId: data.timerId,
-        title: data.title,
-        roomId: data.roomId,
-        completionMessage: data.completionMessage,
-        completionMessageType: typeof data.completionMessage,
-        completionMessageExists: !!data.completionMessage
-      })
       
       if (data.roomId === route.params.id) {
         // Update the specific timer in the timers array
@@ -1184,21 +1448,6 @@ const setupSocketListeners = () => {
             isActive: false,
             isPaused: false,
             remainingTime: 0
-          }
-          
-          // Show completion message if it exists
-          if (data.completionMessage) {
-            console.log('🎉 Showing completion message from timer-finished event:', data.completionMessage)
-            showTimerCompletionMessage({
-              completionMessage: data.completionMessage
-            })
-          } else if (timers.value[timerIndex].completionMessage) {
-            console.log('🎉 Showing completion message from timer data:', timers.value[timerIndex].completionMessage)
-            showTimerCompletionMessage({
-              completionMessage: timers.value[timerIndex].completionMessage
-            })
-          } else {
-            console.log('🎉 No completion message found in event data or timer data')
           }
         }
       }
@@ -1335,13 +1584,142 @@ const setupSocketListeners = () => {
       }
     })
     
-    // Handle timer completion messages
-    socket.value.on('timer-completion-message', (data) => {
-      console.log('Timer completion message:', data)
+    // Handle room setting changes
+    socket.value.on('room-setting-changed', (data) => {
+      console.log('Room setting changed:', data)
       if (data.roomId === route.params.id) {
-        showTimerCompletionMessage(data)
+        if (data.setting === 'showTimerName') {
+          showTimerName.value = data.value
+        }
       }
     })
+    
+    // Handle user count updates
+    socket.value.on('user-count', (count) => {
+      console.log('User count updated:', count)
+      liveViewerCount.value = count
+    })
+    
+    // Handle detailed user count updates with connection info
+    socket.value.on('user-count-update', (data) => {
+      try {
+        console.log('User count update with details:', data)
+        console.log('Current route.params.id:', route.params.id)
+        console.log('Data roomId:', data?.roomId)
+        console.log('Room ID match:', data?.roomId === route.params.id)
+        console.log('Room ID match (string):', String(data?.roomId) === String(route.params.id))
+        
+        // Use both room ID and share token for comparison
+        const isRoomMatch = data?.roomId === route.params.id || 
+                           data?.roomId === room.value?.id ||
+                           String(data?.roomId) === String(route.params.id) ||
+                           String(data?.roomId) === String(room.value?.id)
+        
+        if (isRoomMatch) {
+          liveViewerCount.value = data.count || 0
+          liveConnections.value = data.connections || []
+          console.log('✅ Updated live viewer count:', liveViewerCount.value)
+          console.log('✅ Updated live connections:', liveConnections.value.length)
+        } else {
+          console.log('❌ Room ID mismatch, ignoring event')
+          console.log('Available room data:', { 
+            routeId: route.params.id, 
+            roomId: room.value?.id, 
+            shareToken: room.value?.shareToken 
+          })
+        }
+      } catch (error) {
+        console.error('Error handling user-count-update:', error)
+      }
+    })
+    
+    // Handle user joined events
+    socket.value.on('user-joined', (data) => {
+      try {
+        console.log('User joined:', data)
+        console.log('Current route.params.id:', route.params.id)
+        console.log('Data roomId:', data?.roomId)
+        console.log('Room ID match:', data?.roomId === route.params.id)
+        
+        // Use both room ID and share token for comparison
+        const isRoomMatch = data?.roomId === route.params.id || 
+                           data?.roomId === room.value?.id ||
+                           String(data?.roomId) === String(route.params.id) ||
+                           String(data?.roomId) === String(room.value?.id)
+        
+        if (isRoomMatch && data?.connection) {
+          liveViewerCount.value = data.totalUsers || 0
+          // Add new connection to the list
+          const existingIndex = liveConnections.value.findIndex(c => c.socketId === data.connection.socketId)
+          if (existingIndex === -1) {
+            liveConnections.value.push(data.connection)
+            console.log('✅ Added new connection:', data.connection.browser, 'on', data.connection.os)
+          }
+        } else {
+          console.log('❌ Room ID mismatch or missing connection data, ignoring event')
+          console.log('Available room data:', { 
+            routeId: route.params.id, 
+            roomId: room.value?.id, 
+            shareToken: room.value?.shareToken 
+          })
+        }
+      } catch (error) {
+        console.error('Error handling user-joined:', error)
+      }
+    })
+    
+    // Handle user left events
+    socket.value.on('user-left', (data) => {
+      try {
+        console.log('User left:', data)
+        console.log('Current route.params.id:', route.params.id)
+        console.log('Data roomId:', data?.roomId)
+        console.log('Room ID match:', data?.roomId === route.params.id)
+        
+        // Use both room ID and share token for comparison
+        const isRoomMatch = data?.roomId === route.params.id || 
+                           data?.roomId === room.value?.id ||
+                           String(data?.roomId) === String(route.params.id) ||
+                           String(data?.roomId) === String(room.value?.id)
+        
+        if (isRoomMatch) {
+          liveViewerCount.value = data.totalUsers || 0
+          // Remove connection from the list
+          const beforeCount = liveConnections.value.length
+          liveConnections.value = liveConnections.value.filter(c => c.socketId !== data.socketId)
+          const afterCount = liveConnections.value.length
+          console.log('✅ Removed connection, count changed from', beforeCount, 'to', afterCount)
+        } else {
+          console.log('❌ Room ID mismatch, ignoring event')
+          console.log('Available room data:', { 
+            routeId: route.params.id, 
+            roomId: room.value?.id, 
+            shareToken: room.value?.shareToken 
+          })
+        }
+      } catch (error) {
+        console.error('Error handling user-left:', error)
+      }
+    })
+    
+    // Handle test events to verify connection
+    socket.value.on('test-event', (data) => {
+      console.log('Test event received:', data)
+      console.log('Current route.params.id:', route.params.id)
+      console.log('Data roomId:', data.roomId)
+      console.log('Room ID match:', data.roomId === route.params.id)
+      if (data.roomId === route.params.id) {
+        console.log('✅ Socket connection verified for room:', data.roomId)
+      } else {
+        console.log('❌ Socket test event room ID mismatch')
+      }
+    })
+    
+    // Handle socket errors
+    socket.value.on('error', (error) => {
+      console.error('Socket error:', error)
+    })
+    
     
     // Handle member events
     socket.value.on('member-joined', (data) => {
@@ -1461,7 +1839,8 @@ onMounted(async () => {
   await Promise.all([
     fetchRoom(),
     fetchTimers(),
-    loadCurrentLiveMessage()
+    loadCurrentLiveMessage(),
+    loadConnectionStats()
   ])
   
   // Then connect to socket and join room
@@ -1488,9 +1867,16 @@ onMounted(async () => {
     }
   }, 30000) // Sync every 30 seconds
   
-  // Store interval for cleanup
+  // Set up periodic connection stats refresh as fallback
+  const connectionStatsInterval = setInterval(() => {
+    console.log('🔄 Refreshing connection stats...')
+    loadConnectionStats()
+  }, 10000) // Refresh every 10 seconds
+  
+  // Store intervals for cleanup
   onUnmounted(() => {
     clearInterval(syncInterval)
+    clearInterval(connectionStatsInterval)
   })
 })
 

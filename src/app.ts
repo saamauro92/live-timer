@@ -11,7 +11,7 @@ import { authenticateToken, authenticateRoomOwner, optionalAuth } from './middle
 import { RoomController } from './controllers/room.controller';
 import { TimerController } from './controllers/timer.controller';
 import { AuthController } from './controllers/auth.controller';
-import { messageController } from './controllers/message.controller';
+import { MessageController } from './controllers/message.controller';
 import { SocketService } from './services/socket.service';
 
 export const createApp = (): express.Application => {
@@ -74,6 +74,7 @@ export const createApp = (): express.Application => {
   const authController = new AuthController();
   const roomController = new RoomController();
   const timerController = new TimerController();
+  const messageController = new MessageController();
 
   // Authentication routes
   app.post('/auth/register', authController.register);
@@ -90,6 +91,7 @@ export const createApp = (): express.Application => {
   app.get('/api/rooms/share/:shareToken', roomController.getRoomByShareToken);
   app.get('/api/rooms/:id', optionalAuth, roomController.getRoomById);
   app.get('/api/rooms/:id/stats', roomController.getRoomStats);
+  app.get('/api/rooms/:id/connections', roomController.getRoomConnectionStats);
   app.put('/api/rooms/:id', authenticateRoomOwner, roomController.updateRoom);
   app.delete('/api/rooms/:id', authenticateRoomOwner, roomController.deleteRoom);
 
@@ -113,6 +115,7 @@ export const createApp = (): express.Application => {
   // Debug routes
   app.get('/api/debug/rooms', roomController.getAllRoomsDebug);
   app.get('/api/debug/test-share-token/:shareToken', roomController.testShareToken);
+  app.get('/api/debug/connections', roomController.getAllConnectionsDebug);
   
   // Socket service test endpoint
   app.post('/api/debug/test-socket/:roomId', (req, res) => {
