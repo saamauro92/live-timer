@@ -13,15 +13,15 @@
       </div>
     </div>
 
-    <!-- Timer Name - Top Center -->
-    <div v-if="showTimerName && currentTimerName" class="absolute top-6 left-1/2 transform -translate-x-1/2 z-10">
+    <!-- Timer Name - Top Center (only show if timer is active) -->
+    <div v-if="showTimerName && currentTimerName && timer.isActive" class="absolute top-6 left-1/2 transform -translate-x-1/2 z-10">
       <h1 class="text-3xl font-bold text-blue-400 text-center">
         {{ currentTimerName }}
       </h1>
     </div>
 
-    <!-- Main Timer Display - Center -->
-    <div class="flex flex-col items-center justify-center min-h-screen">
+    <!-- Main Timer Display - Center (only show active timer) -->
+    <div v-if="timer.isActive" class="flex flex-col items-center justify-center min-h-screen">
       <!-- Large Countdown Timer -->
       <div 
         class="font-mono font-bold text-center transition-all duration-500"
@@ -52,18 +52,23 @@
 
       <!-- Timer Status Indicator (Small) -->
       <div class="mt-6 flex items-center justify-center">
-        <div v-if="timer.isActive" class="flex items-center text-green-400">
+        <div class="flex items-center text-green-400">
           <div class="w-3 h-3 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-          <span class="text-lg font-medium">Running</span>
+          <span class="text-lg font-medium">LIVE</span>
         </div>
-        <div v-else-if="timer.isPaused" class="flex items-center text-yellow-400">
-          <div class="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
-          <span class="text-lg font-medium">Paused</span>
+      </div>
+    </div>
+
+    <!-- No Active Timer State -->
+    <div v-else class="flex flex-col items-center justify-center min-h-screen">
+      <div class="text-center">
+        <div class="w-24 h-24 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-6">
+          <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
         </div>
-        <div v-else class="flex items-center text-gray-400">
-          <div class="w-3 h-3 bg-gray-400 rounded-full mr-2"></div>
-          <span class="text-lg font-medium">Stopped</span>
-        </div>
+        <h2 class="text-4xl font-bold text-gray-300 mb-4">No Active Timer</h2>
+        <p class="text-xl text-gray-400">Waiting for timer to start...</p>
       </div>
     </div>
   </div>
@@ -214,6 +219,10 @@ const setupSocketListeners = () => {
         if (data.isActive && !countdownInterval) {
           startCountdown()
         }
+        // Update timer name if provided
+        if (data.title) {
+          currentTimerName.value = data.title
+        }
       }
     })
     
@@ -245,27 +254,33 @@ const setupSocketListeners = () => {
         const timers = data.timers || data.room?.timers || []
         
         if (timers.length > 0) {
-          const latestTimer = timers[timers.length - 1]
+          // Show the latest active timer, or the first timer if none are active
+          const targetTimer = timers.find(t => t.isActive) || timers[timers.length - 1]
           
-          let remainingTime = 0
-          
-          if (latestTimer.isActive) {
-            const now = new Date().getTime()
-            const endTime = new Date(latestTimer.endTimestamp).getTime()
-            remainingTime = Math.max(0, Math.floor((endTime - now) / 1000))
+          if (targetTimer) {
+            let remainingTime = 0
+            
+            if (targetTimer.isActive) {
+              const now = new Date().getTime()
+              const endTime = new Date(targetTimer.endTimestamp).getTime()
+              remainingTime = Math.max(0, Math.floor((endTime - now) / 1000))
+            } else {
+              remainingTime = Math.floor(targetTimer.duration / 1000)
+            }
+            
+            timer.value = {
+              id: targetTimer.id,
+              remainingTime: remainingTime,
+              isActive: targetTimer.isActive,
+              isPaused: !targetTimer.isActive && remainingTime > 0
+            }
+            
+            // Update current timer name
+            currentTimerName.value = targetTimer.title || 'Timer'
           } else {
-            remainingTime = Math.floor(latestTimer.duration / 1000)
+            timer.value = { id: null, remainingTime: 0, isActive: false, isPaused: false }
+            currentTimerName.value = ''
           }
-          
-          timer.value = {
-            id: latestTimer.id,
-            remainingTime: remainingTime,
-            isActive: latestTimer.isActive,
-            isPaused: !latestTimer.isActive && remainingTime > 0
-          }
-          
-          // Update current timer name
-          currentTimerName.value = latestTimer.title || 'Timer'
         } else {
           timer.value = { id: null, remainingTime: 0, isActive: false, isPaused: false }
           currentTimerName.value = ''
@@ -300,6 +315,7 @@ const setupSocketListeners = () => {
         }
       }
     })
+    
   }
 }
 
@@ -339,29 +355,18 @@ watch(() => timer.value.isActive, (isActive) => {
 // Handle page visibility changes (navigation away/back)
 const handleVisibilityChange = () => {
   if (document.visibilityState === 'visible') {
-    // User came back to the page, sync state
-    if (socket.value && socket.value.connected) {
-      socket.value.emit('request-sync')
-    } else {
-      // Reconnect if needed
+    // User came back to the page, reconnect if needed
+    if (!socket.value || !socket.value.connected) {
       connect().then(() => {
         setupSocketListeners()
         joinRoom({ shareToken: route.params.shareToken, userId: null })
-        setTimeout(() => {
-          if (socket.value) {
-            socket.value.emit('request-sync')
-          }
-        }, 500)
       })
     }
   }
 }
 
 // Set up cleanup hooks first (before any async operations)
-let syncInterval = null
-
 onUnmounted(() => {
-  if (syncInterval) clearInterval(syncInterval)
   stopCountdown()
   leaveRoomSocket(room.value?.id)
   document.removeEventListener('visibilitychange', handleVisibilityChange)
@@ -392,19 +397,6 @@ onMounted(async () => {
   
   joinRoom({ shareToken: route.params.shareToken, userId: null })
   
-  // Request fresh room state from server
-  setTimeout(() => {
-    if (socket.value) {
-      socket.value.emit('request-sync')
-    }
-  }, 1000)
-  
-  // Set up periodic sync to ensure state consistency
-  syncInterval = setInterval(() => {
-    if (socket.value && socket.value.connected) {
-      socket.value.emit('request-sync')
-    }
-  }, 30000) // Sync every 30 seconds
 })
 
 // Cleanup is now handled in onMounted

@@ -152,24 +152,7 @@
                 </div>
               </div>
               
-              <!-- Share link info -->
-              <div class="mt-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                <div class="flex items-center justify-between">
-                  <div>
-                    <p class="text-sm font-medium text-gray-900 dark:text-white">Share Link</p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Viewers see this interface</p>
-                  </div>
-                  <button 
-                    @click="copyShareLink"
-                    class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
-                    title="Copy share link"
-                  >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-                    </svg>
-                  </button>
-                </div>
-              </div>
+
             </div>
           </div>
           
@@ -232,7 +215,7 @@
                       min="0"
                       max="59"
                       class="w-12 text-center text-sm font-mono bg-transparent border-none focus:outline-none text-gray-900 dark:text-white"
-                      placeholder="10"
+                      placeholder="00"
                     />
                     <span class="text-gray-400 font-mono">:</span>
                     <input
@@ -386,56 +369,74 @@
               </div>
             
             <!-- Master Controls -->
-              <div v-if="isAuthenticated && timers.length > 0" class="flex items-center space-x-6">
-              <!-- Show Timer Name Toggle -->
-                <div class="flex items-center space-x-3">
-                  <label class="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div v-if="isAuthenticated && timers.length > 0" class="flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
+              <!-- Settings Dropdown -->
+                <div class="relative">
+                  <button 
+                    @click="toggleSettingsDropdown"
+                    class="flex items-center space-x-2 bg-white/70 dark:bg-gray-700/70 hover:bg-white dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-2 transition-all duration-200 shadow-sm hover:shadow-md"
+                  >
+                    <svg class="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
                     </svg>
-                    Show Timer Name
-                  </label>
-                <button 
-                  @click="toggleShowTimerName"
-                    :class="['relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-200 shadow-inner', 
-                      showTimerName ? 'bg-gradient-to-r from-blue-500 to-indigo-600' : 'bg-gray-300 dark:bg-gray-600']"
-                >
-                  <span 
-                      :class="['inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition-transform duration-200',
-                      showTimerName ? 'translate-x-6' : 'translate-x-1']"
-                  ></span>
-                </button>
-                  <span class="text-xs font-medium" :class="showTimerName ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500'">
-                    {{ showTimerName ? 'ON' : 'OFF' }}
-                  </span>
-              </div>
+                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Settings</span>
+                    <svg 
+                      :class="['w-4 h-4 text-gray-500 transition-transform duration-200', settingsDropdownOpen ? 'rotate-180' : '']" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                  </button>
 
-              <!-- Sync Mode Toggle -->
-                <div class="flex items-center space-x-3">
-                  <label class="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                    </svg>
-                    Sync Mode
-                  </label>
-                <button 
-                  @click="toggleSynchronizedMode"
-                    :class="['relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-200 shadow-inner', 
-                      synchronizedMode ? 'bg-gradient-to-r from-green-500 to-emerald-600' : 'bg-gray-300 dark:bg-gray-600']"
-                >
-                  <span 
-                      :class="['inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition-transform duration-200',
-                      synchronizedMode ? 'translate-x-6' : 'translate-x-1']"
-                  ></span>
-                </button>
-                  <span class="text-xs font-medium" :class="synchronizedMode ? 'text-green-600 dark:text-green-400' : 'text-gray-500'">
-                    {{ synchronizedMode ? 'ON' : 'OFF' }}
-                  </span>
-              </div>
+                  <!-- Dropdown Menu -->
+                  <div 
+                    v-if="settingsDropdownOpen"
+                    class="absolute right-0 sm:right-0 left-0 sm:left-auto mt-2 w-full sm:w-80 md:w-96 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 z-50 overflow-hidden"
+                  >
+                    <div class="p-4">
+                      <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                        <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                        Timer Settings
+                      </h4>
+                      
+                      <!-- Show Timer Name Setting -->
+                      <div class="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700">
+                        <div class="flex items-center space-x-3">
+                          <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                            </svg>
+                          </div>
+                          <div>
+                            <h5 class="text-sm font-medium text-gray-900 dark:text-white">Show Timer Names</h5>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Display timer titles in public view</p>
+                          </div>
+                        </div>
+                        <button 
+                          @click="toggleShowTimerName"
+                          :class="['relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-200 shadow-inner', 
+                            showTimerName ? 'bg-gradient-to-r from-blue-500 to-indigo-600' : 'bg-gray-300 dark:bg-gray-600']"
+                        >
+                          <span 
+                            :class="['inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-transform duration-200',
+                            showTimerName ? 'translate-x-6' : 'translate-x-1']"
+                          ></span>
+                        </button>
+                      </div>
+
+                    </div>
+                  </div>
+                </div>
 
               <!-- Master Play/Stop Controls (Music Player Style) -->
-                <div class="flex items-center space-x-4">
+                <div class="flex flex-col sm:flex-row items-center space-y-3 sm:space-y-0 sm:space-x-4">
                 <!-- Play/Pause Button -->
                 <button 
                   @click="playSelectedTimer"
@@ -466,7 +467,7 @@
                 </button>
 
                 <!-- Selected Timer Info -->
-                  <div v-if="selectedTimerId" class="text-sm">
+                  <div v-if="selectedTimerId" class="text-sm text-center sm:text-left">
                     <div class="font-semibold text-gray-900 dark:text-white">{{ getSelectedTimerName() }}</div>
                     <div class="text-xs text-gray-600 dark:text-gray-400">{{ getSelectedTimerStatus() }}</div>
                 </div>
@@ -485,23 +486,36 @@
               <p class="text-gray-600 dark:text-gray-400">Create your first timer using the panel on the left</p>
           </div>
 
-            <!-- Scrollable Timer List -->
+            <!-- Scrollable Timer List with Drag and Drop -->
             <div v-else class="max-h-96 overflow-y-auto space-y-3 pr-2">
             <div 
               v-for="(timer, index) in timers" 
               :key="timer.id"
               @click="selectTimer(timer.id)"
+              draggable="true"
+              @dragstart="handleDragStart($event, index)"
+              @dragover="handleDragOver($event)"
+              @drop="handleDrop($event, index)"
+              @dragend="handleDragEnd"
                 :class="['group relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 transform hover:scale-[1.02]',
                 selectedTimerId === timer.id 
                     ? 'border-blue-500 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 shadow-lg' 
-                    : 'border-gray-200 dark:border-gray-600 bg-white/50 dark:bg-gray-700/50 hover:border-gray-300 dark:hover:border-gray-500 hover:shadow-md'
+                    : 'border-gray-200 dark:border-gray-600 bg-white/50 dark:bg-gray-700/50 hover:border-gray-300 dark:hover:border-gray-500 hover:shadow-md',
+                dragOverIndex === index ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : ''
               ]"
             >
               <div class="flex items-center justify-between">
                 <div class="flex-1">
                     <div class="flex items-center space-x-4">
-                    <!-- Selection Indicator -->
-                    <div class="flex items-center">
+                    <!-- Drag Handle and Selection Indicator -->
+                    <div class="flex items-center space-x-2">
+                        <!-- Drag Handle -->
+                        <div class="cursor-move text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path>
+                          </svg>
+                        </div>
+                        <!-- Selection Indicator -->
                         <div :class="['w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200',
                         selectedTimerId === timer.id 
                             ? 'border-blue-500 bg-blue-500 shadow-lg' 
@@ -543,9 +557,6 @@
                               </svg>
                             </button>
                           </div>
-                          <div v-if="synchronizedMode" class="text-xs bg-gradient-to-r from-blue-500 to-purple-600 text-white px-2 py-1 rounded-full font-medium">
-                          #{{ index + 1 }}
-                        </div>
                       </div>
                         <div class="flex items-center space-x-6">
                           <div class="text-3xl font-mono font-bold text-gray-900 dark:text-white">
@@ -600,13 +611,9 @@
               <h3 class="text-xl font-bold text-gray-900 dark:text-white">Live Broadcast</h3>
       </div>
       
-            <div class="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-4 border border-green-200/50 dark:border-green-700/50">
-          <div class="flex items-start space-x-3">
-            <div class="flex-1">
-                  <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center">
-                    <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-2"></div>
-                Broadcast Message to All Viewers
-              </label>
+    
+          
+
                   <div class="flex space-x-3">
                 <input
                   v-model="liveMessage"
@@ -635,12 +642,8 @@
                       </svg>
                 </button>
               </div>
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                This message will appear instantly for all viewers in the room
-              </p>
-            </div>
-          </div>
-        </div>
+ 
+          
     </div>
 
     <!-- Live Message Display (for all users) -->
@@ -678,16 +681,17 @@ const newTimer = ref({
   duration: 0
 })
 const durationHours = ref(0)
-const durationMinutes = ref(10)
+const durationMinutes = ref(0)
 const durationSeconds = ref(0)
 
-// Synchronized mode
-const synchronizedMode = ref(false)
+// Timer selection
 const selectedTimerId = ref(null)
-const currentPlayingTimerId = ref(null)
 
 // Show timer name in public display
 const showTimerName = ref(true)
+
+// Settings dropdown state
+const settingsDropdownOpen = ref(false)
 
 // Custom timer presets
 const customPresets = ref([
@@ -706,6 +710,10 @@ const currentLiveMessage = ref('')
 // Timer name editing
 const editingTimerId = ref(null)
 const editingTimerName = ref('')
+
+// Drag and drop state
+const draggedIndex = ref(null)
+const dragOverIndex = ref(null)
 
 const formatTime = (seconds) => {
   const mins = Math.floor(seconds / 60)
@@ -822,7 +830,7 @@ const resetTimerForm = () => {
   newTimer.value.title = ''
   newTimer.value.duration = 0
   durationHours.value = 0
-  durationMinutes.value = 10
+  durationMinutes.value = 0
   durationSeconds.value = 0
 }
 
@@ -1175,11 +1183,6 @@ const playSelectedTimer = async () => {
       // Start the timer
       await startTimer(selectedTimerId.value)
       
-      // If sync mode is on, set up auto-advance
-      if (synchronizedMode.value) {
-        currentPlayingTimerId.value = selectedTimerId.value
-        setupSyncMode()
-      }
     }
   } catch (error) {
     console.error('Error controlling timer:', error)
@@ -1196,11 +1199,22 @@ const stopAllTimers = async () => {
       await pauseTimer(timer.id)
     }
     
-    // Reset selection and sync state
+    // Reset selection
     selectedTimerId.value = null
-    currentPlayingTimerId.value = null
   } catch (error) {
     console.error('Error stopping all timers:', error)
+  }
+}
+
+// Settings dropdown toggle method
+const toggleSettingsDropdown = () => {
+  settingsDropdownOpen.value = !settingsDropdownOpen.value
+}
+
+// Close dropdown when clicking outside
+const closeDropdownOnClickOutside = (event) => {
+  if (settingsDropdownOpen.value && !event.target.closest('.relative')) {
+    settingsDropdownOpen.value = false
   }
 }
 
@@ -1239,80 +1253,6 @@ const toggleShowTimerName = async () => {
   }
 }
 
-// Synchronized mode methods
-const toggleSynchronizedMode = () => {
-  synchronizedMode.value = !synchronizedMode.value
-  
-  if (!synchronizedMode.value) {
-    // Turn off sync mode - stop auto-advance
-    currentPlayingTimerId.value = null
-  } else if (selectedTimerId.value) {
-    // Turn on sync mode - set up for current selection
-    currentPlayingTimerId.value = selectedTimerId.value
-  }
-}
-
-const setupSyncMode = () => {
-  if (!synchronizedMode.value) return
-  
-  console.log('🔄 Setting up sync mode')
-  
-  // Clear any existing interval
-  if (window.syncInterval) {
-    clearInterval(window.syncInterval)
-  }
-  
-  // Watch for timer completion and auto-advance
-  const checkForCompletion = () => {
-    if (!currentPlayingTimerId.value) return
-    
-    const currentTimer = timers.value.find(t => t.id === currentPlayingTimerId.value)
-    if (!currentTimer || !currentTimer.isActive) {
-      console.log('🔄 Timer finished or stopped, advancing to next')
-      // Timer finished or stopped, move to next
-      advanceToNextTimer()
-    }
-  }
-  
-  // Check every second
-  const syncInterval = setInterval(checkForCompletion, 1000)
-  
-  // Store interval for cleanup
-  window.syncInterval = syncInterval
-  console.log('🔄 Sync mode interval set up')
-}
-
-const advanceToNextTimer = () => {
-  if (!synchronizedMode.value) return
-  
-  console.log('🔄 Advancing to next timer in sync mode')
-  const currentIndex = timers.value.findIndex(t => t.id === currentPlayingTimerId.value)
-  const nextIndex = currentIndex + 1
-  
-  console.log(`Current index: ${currentIndex}, Next index: ${nextIndex}, Total timers: ${timers.value.length}`)
-  
-  if (nextIndex < timers.value.length) {
-    // Move to next timer
-    const nextTimer = timers.value[nextIndex]
-    console.log(`🔄 Moving to next timer: ${nextTimer.title}`)
-    selectedTimerId.value = nextTimer.id
-    currentPlayingTimerId.value = nextTimer.id
-    
-    // Auto-start the next timer
-    startTimer(nextTimer.id)
-  } else {
-    // No more timers, sync sequence complete
-    console.log('🏁 Sync sequence complete - no more timers')
-    selectedTimerId.value = null
-    currentPlayingTimerId.value = null
-    
-    // Clear sync interval
-    if (window.syncInterval) {
-      clearInterval(window.syncInterval)
-      window.syncInterval = null
-    }
-  }
-}
 
 
 const copyRoomCode = () => {
@@ -1390,6 +1330,81 @@ const cancelEditTimerName = () => {
   editingTimerName.value = ''
 }
 
+// Drag and drop methods
+const handleDragStart = (event, index) => {
+  draggedIndex.value = index
+  event.dataTransfer.effectAllowed = 'move'
+  event.dataTransfer.setData('text/html', event.target.outerHTML)
+  event.target.style.opacity = '0.5'
+}
+
+const handleDragOver = (event) => {
+  event.preventDefault()
+  event.dataTransfer.dropEffect = 'move'
+}
+
+const handleDrop = async (event, dropIndex) => {
+  event.preventDefault()
+  
+  if (draggedIndex.value === null || draggedIndex.value === dropIndex) {
+    return
+  }
+  
+  try {
+    // Reorder timers array
+    const newTimers = [...timers.value]
+    const draggedTimer = newTimers[draggedIndex.value]
+    
+    // Remove dragged timer from its current position
+    newTimers.splice(draggedIndex.value, 1)
+    
+    // Insert at new position
+    newTimers.splice(dropIndex, 0, draggedTimer)
+    
+    // Update local state immediately for better UX
+    timers.value = newTimers
+    
+    // Update order values and send to server
+    const timerIds = newTimers.map(timer => timer.id)
+    await reorderTimers(timerIds)
+    
+  } catch (error) {
+    console.error('Error reordering timers:', error)
+    // Revert on error
+    await fetchTimers()
+  }
+}
+
+const handleDragEnd = (event) => {
+  event.target.style.opacity = '1'
+  draggedIndex.value = null
+  dragOverIndex.value = null
+}
+
+const reorderTimers = async (timerIds) => {
+  if (!isAuthenticated.value) return
+  
+  try {
+    const response = await $fetch(`/api/rooms/${route.params.id}/timers/reorder`, {
+      method: 'POST',
+      body: { timerIds }
+    })
+    
+    if (response.success) {
+      // Broadcast the reorder to all connected users
+      if (socket.value) {
+        socket.value.emit('timers-reordered', {
+          roomId: route.params.id,
+          timerIds
+        })
+      }
+    }
+  } catch (error) {
+    console.error('Error reordering timers:', error)
+    throw error
+  }
+}
+
 const leaveRoom = async () => {
   if (confirm('Are you sure you want to leave this room?')) {
     try {
@@ -1449,6 +1464,7 @@ const setupSocketListeners = () => {
             isPaused: false,
             remainingTime: 0
           }
+          
         }
       }
     })
@@ -1508,6 +1524,7 @@ const setupSocketListeners = () => {
       console.log('Received room-state:', data)
       if (data.id === route.params.id) {
         room.value = data
+        
         
         // Handle the correct data structure: data.timers or data.room.timers
         const fetchedTimers = data.timers || data.room?.timers || []
@@ -1593,6 +1610,7 @@ const setupSocketListeners = () => {
         }
       }
     })
+    
     
     // Handle user count updates
     socket.value.on('user-count', (count) => {
@@ -1835,6 +1853,9 @@ onMounted(async () => {
   // Add visibility change listener
   document.addEventListener('visibilitychange', handleVisibilityChange)
   
+  // Add click outside listener for dropdown
+  document.addEventListener('click', closeDropdownOnClickOutside)
+  
   // First, fetch room and timer data
   await Promise.all([
     fetchRoom(),
@@ -1888,14 +1909,10 @@ onUnmounted(() => {
   })
   countdownIntervals.clear()
   
-  // Clear sync interval
-  if (window.syncInterval) {
-    clearInterval(window.syncInterval)
-    window.syncInterval = null
-  }
   
   leaveRoomSocket(route.params.id)
   document.removeEventListener('visibilitychange', handleVisibilityChange)
+  document.removeEventListener('click', closeDropdownOnClickOutside)
 })
 
 

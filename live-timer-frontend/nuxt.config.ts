@@ -15,6 +15,36 @@ export default defineNuxtConfig({
     port: 3000
   },
 
+  // Fix HMR issues in development
+  vite: {
+    server: {
+      hmr: {
+        overlay: false
+      }
+    },
+    define: {
+      __VUE_PROD_DEVTOOLS__: false
+    }
+  },
+
+  // Development optimizations
+  experimental: {
+    payloadExtraction: false
+  },
+
+  // Fix middleware and routing issues
+  router: {
+    options: {
+      strict: false
+    }
+  },
+
+  // Source map configuration for better debugging
+  sourcemap: {
+    server: true,
+    client: false
+  },
+
   runtimeConfig: {
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:3001',
@@ -51,10 +81,5 @@ export default defineNuxtConfig({
     }
   },
 
-  // Security configuration
-  security: {
-    headers: {
-      crossOriginEmbedderPolicy: process.env.NODE_ENV === 'production' ? 'require-corp' : false
-    }
-  }
+  // Security headers are handled in nitro configuration above
 })
