@@ -357,8 +357,7 @@ export class RoomController {
       logger.error('Error testing share token:', error);
       const response: ApiResponse = {
         success: false,
-        message: 'Internal server error',
-        error: error.message
+        message: 'Internal server error'
       };
       res.status(500).json(response);
     }

@@ -225,6 +225,7 @@ export class RoomService {
       throw new Error('Failed to get recent rooms');
     }
   }
+
 }
 
 export const roomService = new RoomService();

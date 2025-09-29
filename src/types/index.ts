@@ -133,3 +133,4 @@ export interface UserCountUpdateEvent {
   count: number;
   connections: UserConnectionInfo[];
 }
+

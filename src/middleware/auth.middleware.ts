@@ -221,7 +221,9 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
         role: true,
         emailVerified: true,
         banned: true,
-        banExpires: true
+        banExpires: true,
+        createdAt: true,
+        updatedAt: true
       }
     });
 
@@ -231,7 +233,9 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
         email: user.email,
         name: user.name,
         role: user.role || undefined,
-        emailVerified: user.emailVerified
+        emailVerified: user.emailVerified,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
       };
     }
 

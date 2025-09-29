@@ -424,7 +424,7 @@ export class SocketService {
       try {
         const expiredTimers = await timerService.getExpiredTimers();
         for (const timer of expiredTimers) {
-          await timerService.markAsExpired(timer.id);
+          await this.handleTimerExpiration(timer);
           
           // Send timer-finished event
           this.emitToRoom(timer.roomId, 'timer-finished', {
@@ -439,6 +439,18 @@ export class SocketService {
         logger.error('Error in expired timer cleanup:', error);
       }
     }, 30000); // Check every 30 seconds
+  }
+
+  // Handle timer expiration
+  private async handleTimerExpiration(timer: any): Promise<boolean> {
+    try {
+      // Mark timer as expired
+      await timerService.markAsExpired(timer.id);
+      return false;
+    } catch (error) {
+      logger.error('Error handling timer expiration:', error);
+      return false;
+    }
   }
 
   // Graceful shutdown

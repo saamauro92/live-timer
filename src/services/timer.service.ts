@@ -193,17 +193,19 @@ export class TimerService {
 
   async markAsExpired(timerId: string): Promise<Timer | null> {
     try {
-      return await prisma.timer.update({
+      const timer = await prisma.timer.update({
         where: { id: timerId },
         data: { isActive: false }
       });
+
+      return timer;
     } catch (error) {
       logger.error('Error marking timer as expired:', error);
       throw new Error('Failed to mark timer as expired');
     }
   }
 
-  async getActiveTimers(userId: string): Promise<Timer[]> {
+  async getActiveTimersForUser(userId: string): Promise<Timer[]> {
     try {
       // Get all rooms owned by the user
       const userRooms = await prisma.room.findMany({
@@ -330,6 +332,7 @@ export class TimerService {
       throw new Error('Failed to pause all timers');
     }
   }
+
 }
 
 export const timerService = new TimerService();

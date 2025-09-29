@@ -65,8 +65,10 @@ export class TimerController {
           logger.info(`Room ${timer.roomId} stats:`, roomStats);
           
           const broadcastData = {
+            id: updatedTimer.id,
             timerId: updatedTimer.id,
             roomId: timer.roomId,
+            title: updatedTimer.title,
             isActive: updatedTimer.isActive,
             endTimestamp: updatedTimer.endTimestamp,
             remainingTime: Math.max(0, Math.floor((new Date(updatedTimer.endTimestamp).getTime() - new Date().getTime()) / 1000))
@@ -565,7 +567,7 @@ export class TimerController {
         return;
       }
 
-      const timers = await timerService.getActiveTimers(req.user.id);
+      const timers = await timerService.getActiveTimersForUser(req.user.id);
       
       const response: ApiResponse = {
         success: true,
@@ -761,4 +763,5 @@ export class TimerController {
       res.status(500).json(response);
     }
   }
+
 }

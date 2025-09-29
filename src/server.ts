@@ -105,7 +105,7 @@ if (cluster.isPrimary && isProduction) {
 
       // Create and start the app
       const app = createApp();
-      const PORT = process.env.PORT || 3000;
+      const PORT = process.env.PORT || 3001;
       
       // Create HTTP server
       const http = require('http');
