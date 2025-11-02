@@ -105,6 +105,83 @@ export const useAuth = () => {
     }
   };
 
+  const loginWithGoogle = async () => {
+    setLoading(true);
+    try {
+      const config = useRuntimeConfig();
+      const apiBase = config.public.apiBase;
+      const googleClientId = config.public.googleClientId;
+
+      if (!googleClientId) {
+        throw new Error("Google Client ID is not configured");
+      }
+
+      // Get the auth URL from backend to ensure consistency
+      const response = await $fetch(`${apiBase}/auth/google/url`, {
+        method: "GET",
+      });
+
+      if (response.success && response.authUrl) {
+        window.location.href = response.authUrl;
+      } else {
+        throw new Error("Failed to get Google auth URL");
+      }
+    } catch (error: unknown) {
+      console.error("Google login error:", error);
+      setLoading(false);
+      throw error;
+    }
+  };
+
+  const loginWithGoogleCode = async (code: string) => {
+    setLoading(true);
+    try {
+      // Exchange authorization code for tokens via backend
+      const response = await $fetch("/api/auth/google/callback", {
+        method: "POST",
+        body: { code },
+      });
+
+      if (response.success && response.token) {
+        const token = useCookie("auth-token", {
+          maxAge: 60 * 60 * 24 * 7, // 7 days
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "strict",
+        });
+        token.value = response.token;
+        setUser(response.user);
+        return { success: true, user: response.user };
+      } else {
+        return { success: false, error: response.message || "Google authentication failed" };
+      }
+    } catch (error: any) {
+      console.error("Google OAuth code exchange error:", error);
+      return {
+        success: false,
+        error: error.data?.message || error.message || "Google authentication failed",
+      };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadGoogleScript = (): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      if (window.google) {
+        resolve();
+        return;
+      }
+
+      const script = document.createElement("script");
+      script.src = "https://accounts.google.com/gsi/client";
+      script.async = true;
+      script.defer = true;
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error("Failed to load Google script"));
+      document.head.appendChild(script);
+    });
+  };
+
   // Initialize auth state on app start
   const initializeAuth = async () => {
     if (isInitialized()) return;
@@ -125,5 +202,7 @@ export const useAuth = () => {
     logout,
     fetchUser,
     initializeAuth,
+    loginWithGoogle,
+    loginWithGoogleCode,
   };
 };

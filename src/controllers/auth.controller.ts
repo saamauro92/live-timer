@@ -2,11 +2,26 @@ import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
+import { OAuth2Client } from "google-auth-library";
 import { prisma } from "../config/database";
 import { logger } from "../utils/logger";
 import { EmailService } from "../services/email.service";
 
 export class AuthController {
+  private googleClient: OAuth2Client | null = null;
+
+  constructor() {
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    const redirectUri = process.env.GOOGLE_REDIRECT_URI;
+
+    if (clientId && clientSecret && redirectUri) {
+      this.googleClient = new OAuth2Client(clientId, clientSecret, redirectUri);
+    } else {
+      logger.warn("Google OAuth credentials not fully configured. Google OAuth will be disabled.");
+    }
+  }
+
   // Register new user
   async register(req: Request, res: Response): Promise<void> {
     try {
@@ -451,6 +466,521 @@ export class AuthController {
         success: false,
         message: "Internal server error",
       });
+    }
+  }
+
+  // Google OAuth login
+  async googleAuth(req: Request, res: Response): Promise<void> {
+    try {
+      if (!this.googleClient) {
+        res.status(503).json({
+          success: false,
+          message: "Google OAuth is not configured",
+        });
+        return;
+      }
+
+      const { token } = req.body;
+
+      if (!token) {
+        res.status(400).json({
+          success: false,
+          message: "Google token is required",
+        });
+        return;
+      }
+
+      // Verify the Google token
+      const ticket = await this.googleClient.verifyIdToken({
+        idToken: token,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+
+      const payload = ticket.getPayload();
+      if (!payload) {
+        res.status(400).json({
+          success: false,
+          message: "Invalid Google token",
+        });
+        return;
+      }
+
+      const { email, name, picture, sub: googleId } = payload;
+
+      if (!email) {
+        res.status(400).json({
+          success: false,
+          message: "Email not provided by Google",
+        });
+        return;
+      }
+
+      // Check if user already exists
+      let user = await prisma.user.findUnique({
+        where: { email },
+        include: {
+          accounts: {
+            where: { providerId: "google" },
+          },
+        },
+      });
+
+      if (user) {
+        // Check if user is banned
+        if (user.banned) {
+          const now = new Date();
+          if (!user.banExpires || user.banExpires > now) {
+            res.status(403).json({
+              success: false,
+              message: "Account is banned",
+            });
+            return;
+          }
+        }
+
+        // Check if Google account is linked
+        const googleAccount = user.accounts.find((account) => account.providerId === "google");
+        if (!googleAccount) {
+          // Link Google account to existing user
+          await prisma.account.create({
+            data: {
+              accountId: googleId,
+              providerId: "google",
+              userId: user.id,
+            },
+          });
+        }
+
+        // Update user info if needed
+        const updates: any = {};
+        if (name && user.name !== name) updates.name = name;
+        if (picture && user.image !== picture) updates.image = picture;
+        if (!user.emailVerified) updates.emailVerified = true;
+
+        if (Object.keys(updates).length > 0) {
+          user = await prisma.user.update({
+            where: { id: user.id },
+            data: updates,
+            include: {
+              accounts: {
+                where: { providerId: "google" },
+              },
+            },
+          });
+        }
+      } else {
+        // Create new user
+        user = await prisma.user.create({
+          data: {
+            email,
+            name: name || email.split("@")[0],
+            image: picture,
+            emailVerified: true,
+          },
+          include: {
+            accounts: {
+              where: { providerId: "google" },
+            },
+          },
+        });
+
+        // Create Google account
+        await prisma.account.create({
+          data: {
+            accountId: googleId,
+            providerId: "google",
+            userId: user.id,
+          },
+        });
+
+        // Send welcome email
+        await EmailService.sendWelcomeEmail(user.email, user.name);
+      }
+
+      // Generate JWT token
+      const jwtSecret = process.env.JWT_SECRET;
+      if (!jwtSecret) {
+        throw new Error("JWT_SECRET not configured");
+      }
+
+      const jwtToken = jwt.sign({ id: user.id, email: user.email }, jwtSecret, { expiresIn: "7d" });
+
+      logger.info(`User logged in via Google: ${user.email} (${user.id})`);
+
+      res.json({
+        success: true,
+        message: "Google authentication successful",
+        token: jwtToken,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          image: user.image,
+          emailVerified: user.emailVerified,
+          createdAt: user.createdAt,
+        },
+      });
+    } catch (error) {
+      logger.error("Google authentication error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Google authentication failed",
+      });
+    }
+  }
+
+  // Get Google OAuth URL
+  async getGoogleAuthUrl(req: Request, res: Response): Promise<void> {
+    try {
+      if (!this.googleClient) {
+        res.status(503).json({
+          success: false,
+          message: "Google OAuth is not configured",
+        });
+        return;
+      }
+
+      const authUrl = this.googleClient.generateAuthUrl({
+        access_type: "offline",
+        scope: ["profile", "email"],
+        prompt: "select_account",
+      });
+
+      res.json({
+        success: true,
+        authUrl,
+      });
+    } catch (error) {
+      logger.error("Get Google auth URL error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to generate Google auth URL",
+      });
+    }
+  }
+
+  // Handle Google OAuth callback
+  async googleCallback(req: Request, res: Response): Promise<void> {
+    try {
+      if (!this.googleClient) {
+        res.status(503).json({
+          success: false,
+          message: "Google OAuth is not configured",
+        });
+        return;
+      }
+
+      const { code } = req.body;
+
+      if (!code) {
+        res.status(400).json({
+          success: false,
+          message: "Authorization code is required",
+        });
+        return;
+      }
+
+      // Exchange authorization code for tokens
+      const { tokens } = await this.googleClient.getToken(code);
+      this.googleClient.setCredentials(tokens);
+
+      // Get user info from Google
+      const ticket = await this.googleClient.verifyIdToken({
+        idToken: tokens.id_token!,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+
+      const payload = ticket.getPayload();
+      if (!payload) {
+        res.status(400).json({
+          success: false,
+          message: "Invalid Google token",
+        });
+        return;
+      }
+
+      const { email, name, picture, sub: googleId } = payload;
+
+      if (!email) {
+        res.status(400).json({
+          success: false,
+          message: "Email not provided by Google",
+        });
+        return;
+      }
+
+      // Check if user already exists
+      let user = await prisma.user.findUnique({
+        where: { email },
+        include: {
+          accounts: {
+            where: { providerId: "google" },
+          },
+        },
+      });
+
+      if (user) {
+        // Check if user is banned
+        if (user.banned) {
+          const now = new Date();
+          if (!user.banExpires || user.banExpires > now) {
+            res.status(403).json({
+              success: false,
+              message: "Account is banned",
+            });
+            return;
+          }
+        }
+
+        // Check if Google account is linked
+        const googleAccount = user.accounts.find((account) => account.providerId === "google");
+        if (!googleAccount) {
+          // Link Google account to existing user
+          await prisma.account.create({
+            data: {
+              accountId: googleId,
+              providerId: "google",
+              userId: user.id,
+            },
+          });
+        }
+
+        // Update user info if needed
+        const updates: any = {};
+        if (name && user.name !== name) updates.name = name;
+        if (picture && user.image !== picture) updates.image = picture;
+        if (!user.emailVerified) updates.emailVerified = true;
+
+        if (Object.keys(updates).length > 0) {
+          user = await prisma.user.update({
+            where: { id: user.id },
+            data: updates,
+            include: {
+              accounts: {
+                where: { providerId: "google" },
+              },
+            },
+          });
+        }
+      } else {
+        // Create new user
+        user = await prisma.user.create({
+          data: {
+            email,
+            name: name || email.split("@")[0],
+            image: picture,
+            emailVerified: true,
+          },
+          include: {
+            accounts: {
+              where: { providerId: "google" },
+            },
+          },
+        });
+
+        // Create Google account
+        await prisma.account.create({
+          data: {
+            accountId: googleId,
+            providerId: "google",
+            userId: user.id,
+          },
+        });
+
+        // Send welcome email
+        await EmailService.sendWelcomeEmail(user.email, user.name);
+      }
+
+      // Generate JWT token
+      const jwtSecret = process.env.JWT_SECRET;
+      if (!jwtSecret) {
+        throw new Error("JWT_SECRET not configured");
+      }
+
+      const jwtToken = jwt.sign({ id: user.id, email: user.email }, jwtSecret, { expiresIn: "7d" });
+
+      logger.info(`User logged in via Google OAuth callback: ${user.email} (${user.id})`);
+
+      res.json({
+        success: true,
+        message: "Google authentication successful",
+        token: jwtToken,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          image: user.image,
+          emailVerified: user.emailVerified,
+          createdAt: user.createdAt,
+        },
+      });
+    } catch (error) {
+      logger.error("Google OAuth callback error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Google OAuth callback failed",
+      });
+    }
+  }
+
+  // Handle Google OAuth callback redirect (GET request from Google)
+  async googleCallbackRedirect(req: Request, res: Response): Promise<void> {
+    try {
+      if (!this.googleClient) {
+        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+        res.redirect(`${frontendUrl}/auth/google-callback?error=oauth_not_configured`);
+        return;
+      }
+
+      const { code, error } = req.query;
+
+      if (error) {
+        // Redirect to frontend with error
+        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+        res.redirect(`${frontendUrl}/auth/google-callback?error=${encodeURIComponent(error as string)}`);
+        return;
+      }
+
+      if (!code) {
+        // Redirect to frontend with error
+        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+        res.redirect(`${frontendUrl}/auth/google-callback?error=no_code`);
+        return;
+      }
+
+      // Exchange authorization code for tokens
+      const { tokens } = await this.googleClient.getToken(code as string);
+      this.googleClient.setCredentials(tokens);
+
+      // Get user info from Google
+      const ticket = await this.googleClient.verifyIdToken({
+        idToken: tokens.id_token!,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+
+      const payload = ticket.getPayload();
+      if (!payload) {
+        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+        res.redirect(`${frontendUrl}/auth/google-callback?error=invalid_token`);
+        return;
+      }
+
+      const { email, name, picture, sub: googleId } = payload;
+
+      if (!email) {
+        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+        res.redirect(`${frontendUrl}/auth/google-callback?error=no_email`);
+        return;
+      }
+
+      // Check if user already exists
+      let user = await prisma.user.findUnique({
+        where: { email },
+        include: {
+          accounts: {
+            where: { providerId: "google" },
+          },
+        },
+      });
+
+      if (user) {
+        // Check if user is banned
+        if (user.banned) {
+          const now = new Date();
+          if (!user.banExpires || user.banExpires > now) {
+            const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+            res.redirect(`${frontendUrl}/auth/google-callback?error=account_banned`);
+            return;
+          }
+        }
+
+        // Check if Google account is linked
+        const googleAccount = user.accounts.find((account) => account.providerId === "google");
+        if (!googleAccount) {
+          // Link Google account to existing user
+          await prisma.account.create({
+            data: {
+              accountId: googleId,
+              providerId: "google",
+              userId: user.id,
+            },
+          });
+        }
+
+        // Update user info if needed
+        const updates: any = {};
+        if (name && user.name !== name) updates.name = name;
+        if (picture && user.image !== picture) updates.image = picture;
+        if (!user.emailVerified) updates.emailVerified = true;
+
+        if (Object.keys(updates).length > 0) {
+          user = await prisma.user.update({
+            where: { id: user.id },
+            data: updates,
+            include: {
+              accounts: {
+                where: { providerId: "google" },
+              },
+            },
+          });
+        }
+      } else {
+        // Create new user
+        user = await prisma.user.create({
+          data: {
+            email,
+            name: name || email.split("@")[0],
+            image: picture,
+            emailVerified: true,
+          },
+          include: {
+            accounts: {
+              where: { providerId: "google" },
+            },
+          },
+        });
+
+        // Create Google account
+        await prisma.account.create({
+          data: {
+            accountId: googleId,
+            providerId: "google",
+            userId: user.id,
+          },
+        });
+
+        // Send welcome email
+        await EmailService.sendWelcomeEmail(user.email, user.name);
+      }
+
+      // Generate JWT token
+      const jwtSecret = process.env.JWT_SECRET;
+      if (!jwtSecret) {
+        throw new Error("JWT_SECRET not configured");
+      }
+
+      const jwtToken = jwt.sign({ id: user.id, email: user.email }, jwtSecret, { expiresIn: "7d" });
+
+      logger.info(`User logged in via Google OAuth redirect: ${user.email} (${user.id})`);
+
+      // Redirect to frontend with success and token
+      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+      res.redirect(
+        `${frontendUrl}/auth/google-callback?success=true&token=${jwtToken}&user=${encodeURIComponent(
+          JSON.stringify({
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            image: user.image,
+            emailVerified: user.emailVerified,
+            createdAt: user.createdAt,
+          })
+        )}`
+      );
+    } catch (error) {
+      logger.error("Google OAuth redirect error:", error);
+      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+      res.redirect(`${frontendUrl}/auth/google-callback?error=server_error`);
     }
   }
 }

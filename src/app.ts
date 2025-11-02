@@ -89,6 +89,12 @@ export const createApp = (): express.Application => {
   app.post("/auth/verify-email", authController.verifyEmail);
   app.post("/auth/resend-verification", authController.resendVerificationEmail);
 
+  // Google OAuth routes
+  app.post("/auth/google", authController.googleAuth.bind(authController));
+  app.get("/auth/google/url", authController.getGoogleAuthUrl.bind(authController));
+  app.post("/auth/google/callback", authController.googleCallback.bind(authController));
+  app.get("/auth/google/callback", authController.googleCallbackRedirect.bind(authController));
+
   // Stripe routes
   app.post("/stripe/create-customer", authenticateToken, stripeController.createCustomer);
   app.post("/stripe/create-checkout-session", authenticateToken, stripeController.createCheckoutSession);
