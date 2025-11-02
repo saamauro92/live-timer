@@ -127,12 +127,14 @@ export class RoomController {
       // Broadcast room setting changes to all connected users
       if (data.showTimerName !== undefined) {
         const socketService = (global as any).socketService;
-        if (socketService) {
-          socketService.emitToRoom(id, 'room-setting-changed', {
+        if (socketService && room) {
+          socketService.emitToRoom(id, "room-setting-changed", {
             roomId: id,
-            setting: 'showTimerName',
-            value: data.showTimerName
+            shareToken: room.shareToken,
+            setting: "showTimerName",
+            value: data.showTimerName,
           });
+          logger.info(`Broadcasted showTimerName setting change: ${data.showTimerName} for room ${id}`);
         }
       }
 

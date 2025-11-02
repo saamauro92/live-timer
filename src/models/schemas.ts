@@ -20,12 +20,14 @@ export const getRoomByShareTokenSchema = z.object({
 export const createTimerSchema = z.object({
   title: z.string().min(1).max(200),
   description: z.string().optional(),
+  completionMessage: z.string().optional(),
   duration: z.number().min(1000).max(86400000) // 1 second to 24 hours in ms
 });
 
 export const updateTimerSchema = z.object({
   title: z.string().min(1).max(200).optional(),
   description: z.string().optional(),
+  completionMessage: z.string().optional(),
   duration: z.number().min(1000).max(86400000).optional()
 });
 
@@ -42,6 +44,7 @@ export const joinRoomSchema = z.object({
 export const createTimerSocketSchema = z.object({
   title: z.string().min(1).max(200),
   description: z.string().optional(),
+  completionMessage: z.string().optional(),
   duration: z.number().min(1000).max(86400000)
 });
 

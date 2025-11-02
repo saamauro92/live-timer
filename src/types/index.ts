@@ -15,6 +15,7 @@ export interface Timer {
   roomId: string;
   title: string;
   description?: string;
+  completionMessage?: string; // Message to display when timer reaches 0
   startTimestamp: Date;
   endTimestamp: Date;
   duration: number; // milliseconds
@@ -33,6 +34,7 @@ export interface CreateTimerData {
   roomId: string;
   title: string;
   description?: string;
+  completionMessage?: string; // Message to display when timer reaches 0
   duration: number; // milliseconds
 }
 

@@ -18,7 +18,7 @@
         </div>
         <button
           @click="showCreateRoom = true"
-          class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center">
+          class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 py-3 rounded-xl font-semibold transition-colors duration-200 shadow-lg flex items-center">
           <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
           </svg>
@@ -65,7 +65,7 @@
         <p class="text-gray-600 dark:text-gray-400 mb-8 text-lg">Create your first room to start collaborating with your team.</p>
         <button
           @click="showCreateRoom = true"
-          class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center mx-auto">
+          class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-colors duration-200 shadow-lg flex items-center mx-auto">
           <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
           </svg>
@@ -77,7 +77,7 @@
         <div
           v-for="room in rooms"
           :key="room.id"
-          class="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-gray-700/50 p-6 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]">
+          class="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-gray-700/50 p-6 shadow-lg hover:shadow-xl transition-shadow duration-200">
           <div class="flex items-start justify-between mb-6">
             <div class="flex-1">
               <div class="flex items-center mb-2">
@@ -109,7 +109,7 @@
               </button>
               <button
                 @click="deleteRoom(room.id)"
-                class="text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
+                class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
                 title="Delete room">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -144,7 +144,7 @@
           <div class="flex space-x-3">
             <NuxtLink
               :to="`/rooms/${room.id}`"
-              class="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white py-3 px-4 rounded-xl font-semibold text-center transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center justify-center">
+              class="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white py-3 px-4 rounded-xl font-semibold text-center transition-colors duration-200 shadow-lg flex items-center justify-center">
               <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   stroke-linecap="round"
@@ -156,7 +156,7 @@
             </NuxtLink>
             <button
               @click="shareRoom(room)"
-              class="bg-white/50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 py-3 px-4 rounded-xl font-semibold transition-all duration-200 hover:bg-white dark:hover:bg-gray-700 transform hover:scale-105 flex items-center">
+              class="bg-white/50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 py-3 px-4 rounded-xl font-semibold transition-colors duration-200 hover:bg-white dark:hover:bg-gray-700 flex items-center">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   stroke-linecap="round"
@@ -226,7 +226,7 @@
               <button
                 type="submit"
                 :disabled="creatingRoom"
-                class="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-xl font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 shadow-lg">
+                class="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-xl font-semibold transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg">
                 <div class="flex items-center">
                   <svg v-if="creatingRoom" class="w-5 h-5 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path

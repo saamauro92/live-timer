@@ -13,31 +13,53 @@
       </div>
     </div>
 
-    <!-- Timer Name - Top Center (only show if timer is active) -->
-    <div v-if="showTimerName && currentTimerName && timer.isActive" class="absolute top-6 left-1/2 transform -translate-x-1/2 z-10">
-      <h1 class="text-3xl font-bold text-blue-400 text-center">
+    <!-- Timer Name - Top Center (show if timer exists and setting is enabled) -->
+    <div v-if="showTimerName && currentTimerName && timer.id" class="absolute top-6 left-1/2 transform -translate-x-1/2 z-10">
+      <h1 class="text-3xl font-bold text-center" :class="timer.isActive ? 'text-blue-400' : 'text-gray-400'">
         {{ currentTimerName }}
       </h1>
     </div>
 
-    <!-- Main Timer Display - Center (only show active timer) -->
-    <div v-if="timer.isActive" class="flex flex-col items-center justify-center min-h-screen">
+    <!-- Main Timer Display - Center (show timer if it exists, or show empty state) -->
+    <div v-if="timer.id" class="flex flex-col items-center justify-center min-h-screen">
       <!-- Large Countdown Timer -->
       <div 
         class="font-mono font-bold text-center transition-all duration-500"
-        :class="currentLiveMessage ? 'text-8xl' : 'text-9xl'"
+        :class="[
+          timer.isActive 
+            ? (currentLiveMessage ? 'text-8xl' : 'text-9xl')
+            : (currentLiveMessage ? 'text-7xl' : 'text-8xl'),
+          timer.isActive ? 'text-white' : 'text-gray-500'
+        ]"
         :style="{ 
-          fontSize: currentLiveMessage ? '10rem' : '16rem',
+          fontSize: timer.isActive 
+            ? (currentLiveMessage ? '10rem' : '16rem')
+            : (currentLiveMessage ? '8rem' : '12rem'),
           lineHeight: '1',
-          textShadow: '0 0 30px rgba(255, 255, 255, 0.4)'
+          textShadow: timer.isActive ? '0 0 30px rgba(255, 255, 255, 0.4)' : '0 0 15px rgba(255, 255, 255, 0.2)'
         }"
       >
         {{ formatTime(timer.remainingTime) }}
       </div>
 
-      <!-- Live Message Display -->
+      <!-- Completion Message Display (when timer reaches 0) -->
       <div 
-        v-if="currentLiveMessage" 
+        v-if="timer.remainingTime === 0 && timer.completionMessage" 
+        class="mt-8 text-center animate-fadeIn"
+        :style="{ 
+          fontSize: '4rem',
+          lineHeight: '1.2',
+          textShadow: '0 0 15px rgba(251, 191, 36, 0.5)'
+        }"
+      >
+        <div class="text-yellow-400 font-semibold">
+          {{ timer.completionMessage }}
+        </div>
+      </div>
+
+      <!-- Live Message Display (show only when timer is active) -->
+      <div 
+        v-if="currentLiveMessage && timer.remainingTime > 0" 
         class="mt-8 text-center animate-fadeIn"
         :style="{ 
           fontSize: '4rem',
@@ -50,17 +72,39 @@
         </div>
       </div>
 
-      <!-- Timer Status Indicator (Small) -->
-      <div class="mt-6 flex items-center justify-center">
+      <!-- Timer Status Indicator (only show when active) -->
+      <div v-if="timer.isActive" class="mt-6 flex items-center justify-center">
         <div class="flex items-center text-green-400">
           <div class="w-3 h-3 bg-green-500 rounded-full mr-2 animate-pulse"></div>
           <span class="text-lg font-medium">LIVE</span>
         </div>
       </div>
+      <!-- Inactive Timer Indicator -->
+      <div v-else-if="timer.remainingTime > 0" class="mt-6 flex items-center justify-center">
+        <div class="flex items-center text-gray-500">
+          <div class="w-3 h-3 bg-gray-500 rounded-full mr-2"></div>
+          <span class="text-lg font-medium">READY</span>
+        </div>
+      </div>
     </div>
 
-    <!-- No Active Timer State -->
+    <!-- No Timer State (only show if no timer exists at all) -->
     <div v-else class="flex flex-col items-center justify-center min-h-screen">
+      <!-- Live Message Display (show even when no timer) -->
+      <div 
+        v-if="currentLiveMessage" 
+        class="mb-12 text-center animate-fadeIn"
+        :style="{ 
+          fontSize: '4rem',
+          lineHeight: '1.2',
+          textShadow: '0 0 15px rgba(34, 197, 94, 0.5)'
+        }"
+      >
+        <div class="text-green-400 font-semibold">
+          {{ currentLiveMessage }}
+        </div>
+      </div>
+
       <div class="text-center">
         <div class="w-24 h-24 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-6">
           <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -88,12 +132,14 @@ const timer = ref({
   id: null,
   remainingTime: 0,
   isActive: false,
-  isPaused: false
+  isPaused: false,
+  completionMessage: null
 })
 const members = ref([])
 const currentLiveMessage = ref('')
 const showTimerName = ref(true)
 const currentTimerName = ref('')
+const selectedTimerId = ref(null) // Track which timer was selected by admin
 // Timer control variables removed - public room is read-only
 
 const formatTime = (seconds) => {
@@ -120,36 +166,83 @@ const fetchTimer = async () => {
   try {
     const response = await $fetch(`/api/rooms/share/${route.params.shareToken}`)
     
-    const timers = response.data.room?.timers || response.data.timers || []
+    console.log('Full API response:', response)
+    
+    // API returns: { success: true, data: room } where room has timers
+    const roomData = response.data
+    const timers = roomData?.timers || []
+    
+    console.log('Fetched timers in share page:', timers)
+    console.log('Room data:', roomData)
     
     if (timers.length > 0) {
-      const latestTimer = timers[timers.length - 1]
+      // Sort timers by order (ascending), then by createdAt as fallback
+      const sortedTimers = [...timers].sort((a, b) => {
+        const orderDiff = (a.order || 0) - (b.order || 0)
+        if (orderDiff !== 0) return orderDiff
+        // If order is same, sort by creation date
+        const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0
+        const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0
+        return aDate - bDate
+      })
       
-      let remainingTime = 0
+      console.log('Sorted timers:', sortedTimers)
       
-      if (latestTimer.isActive) {
-        const now = new Date().getTime()
-        const endTime = new Date(latestTimer.endTimestamp).getTime()
-        remainingTime = Math.max(0, Math.floor((endTime - now) / 1000))
+      // Priority: 1. Selected timer (if exists), 2. Active timer, 3. First timer
+      let targetTimer = null
+      
+      // If there's a selected timer ID, try to find it first
+      if (selectedTimerId.value) {
+        targetTimer = sortedTimers.find(t => t.id === selectedTimerId.value)
+      }
+      
+      // If no selected timer or selected timer not found, find active timer
+      if (!targetTimer) {
+        targetTimer = sortedTimers.find(t => t.isActive)
+      }
+      
+      // If still no timer, use the first one
+      if (!targetTimer) {
+        targetTimer = sortedTimers[0]
+      }
+      
+      console.log('Target timer selected:', targetTimer)
+      
+      if (targetTimer) {
+        let remainingTime = 0
+        
+        if (targetTimer.isActive && targetTimer.endTimestamp) {
+          const now = new Date().getTime()
+          const endTime = new Date(targetTimer.endTimestamp).getTime()
+          remainingTime = Math.max(0, Math.floor((endTime - now) / 1000))
+        } else if (targetTimer.duration) {
+          remainingTime = Math.floor(targetTimer.duration / 1000)
+        }
+        
+        timer.value = {
+          id: targetTimer.id,
+          remainingTime: remainingTime,
+          isActive: targetTimer.isActive || false,
+          isPaused: !targetTimer.isActive && remainingTime > 0,
+          completionMessage: targetTimer.completionMessage || null
+        }
+        
+        // Set the current timer name
+        currentTimerName.value = targetTimer.title || 'Timer'
+        
+        console.log('Timer set on initial load:', timer.value)
       } else {
-        remainingTime = Math.floor(latestTimer.duration / 1000)
+        timer.value = { id: null, remainingTime: 0, isActive: false, isPaused: false, completionMessage: null }
+        currentTimerName.value = ''
       }
-      
-      timer.value = {
-        id: latestTimer.id,
-        remainingTime: remainingTime,
-        isActive: latestTimer.isActive,
-        isPaused: !latestTimer.isActive && remainingTime > 0
-      }
-      
-      // Set the current timer name
-      currentTimerName.value = latestTimer.title || 'Timer'
     } else {
-      timer.value = { id: null, remainingTime: 0, isActive: false, isPaused: false }
+      timer.value = { id: null, remainingTime: 0, isActive: false, isPaused: false, completionMessage: null }
       currentTimerName.value = ''
+      console.log('No timers found in room')
     }
   } catch (error) {
     console.error('Error fetching timer:', error)
+    // Don't reset timer on error, keep whatever we have
   }
 }
 
@@ -187,17 +280,66 @@ const setupSocketListeners = () => {
     // Essential socket event listeners for stage display
     
     socket.value.on('timer-update', (data) => {
-      if (data.roomId === room.value?.id) {
-        timer.value = {
-          id: data.id,
-          remainingTime: Math.max(0, Math.floor((new Date(data.endTimestamp).getTime() - new Date().getTime()) / 1000)),
-          isActive: data.isActive,
-          isPaused: !data.isActive && data.duration > 0
-        }
-        
-        // Update current timer name if available
-        if (data.title) {
-          currentTimerName.value = data.title
+      console.log('Timer update event:', data)
+      if (data.roomId === room.value?.id || !room.value?.id) {
+        // Only update if this is the currently displayed timer, or if no timer is displayed
+        if (timer.value.id === data.id || !timer.value.id) {
+          let remainingTime = 0
+          
+          if (data.isActive && data.endTimestamp) {
+            const now = new Date().getTime()
+            const endTime = new Date(data.endTimestamp).getTime()
+            remainingTime = Math.max(0, Math.floor((endTime - now) / 1000))
+          } else if (data.duration) {
+            // Duration is in milliseconds, convert to seconds
+            remainingTime = Math.floor(data.duration / 1000)
+          } else if (timer.value.remainingTime > 0 && !data.isActive) {
+            // Preserve current remaining time if duration not provided and timer not active
+            remainingTime = timer.value.remainingTime
+          }
+          
+          timer.value = {
+            id: data.id,
+            remainingTime: remainingTime,
+            isActive: data.isActive || false,
+            isPaused: !data.isActive && remainingTime > 0,
+            completionMessage: data.completionMessage || timer.value.completionMessage || null
+          }
+          
+          // Update current timer name if available (timer title was changed)
+          if (data.title !== undefined) {
+            currentTimerName.value = data.title || 'Timer'
+          }
+          
+          console.log('Updated timer from timer-update:', timer.value)
+        } else {
+          // Timer was updated but it's not the currently displayed one
+          // Check if we should switch to it (e.g., if it became active and current one is not)
+          if (data.isActive && !timer.value.isActive) {
+            // The updated timer became active, switch to it
+            let remainingTime = 0
+            if (data.endTimestamp) {
+              const now = new Date().getTime()
+              const endTime = new Date(data.endTimestamp).getTime()
+              remainingTime = Math.max(0, Math.floor((endTime - now) / 1000))
+            } else if (data.duration) {
+              remainingTime = Math.floor(data.duration / 1000)
+            }
+            
+            timer.value = {
+              id: data.id,
+              remainingTime: remainingTime,
+              isActive: true,
+              isPaused: false,
+              completionMessage: data.completionMessage || timer.value.completionMessage || null
+            }
+            
+            if (data.title !== undefined) {
+              currentTimerName.value = data.title || 'Timer'
+            }
+            
+            console.log('Switched to active timer from timer-update')
+          }
         }
       }
     })
@@ -207,6 +349,86 @@ const setupSocketListeners = () => {
         timer.value.isActive = false
         timer.value.isPaused = false
         timer.value.remainingTime = 0
+        timer.value.completionMessage = data.completionMessage || timer.value.completionMessage || null
+      }
+    })
+    
+    // Handle timer deletion - if current timer is deleted, select next available
+    socket.value.on('timer-deleted', (data) => {
+      console.log('Timer deleted event:', data)
+      
+      // Clear selected timer ID if it was the deleted one
+      if (selectedTimerId.value === data.timerId) {
+        selectedTimerId.value = null
+      }
+      
+      // Always refresh timer state when any timer is deleted (data.timerId may not have roomId)
+      // This ensures we get the updated timer list
+      if (timer.value.id === data.timerId || data.timerId) {
+        console.log('Timer was deleted, fetching updated state...')
+        // Request fresh room state to get updated timer list
+        if (socket.value && socket.value.connected) {
+          socket.value.emit('request-sync')
+        } else {
+          // Fallback: refetch directly
+          fetchTimer()
+        }
+      }
+    })
+    
+    // Handle timer creation - refresh timer list
+    socket.value.on('timer-created', (data) => {
+      console.log('Timer created event:', data)
+      if (data.roomId === room.value?.id || !room.value?.id) {
+        // Request fresh room state to get updated timer list
+        if (socket.value && socket.value.connected) {
+          socket.value.emit('request-sync')
+        } else {
+          // Fallback: refetch directly
+          fetchTimer()
+        }
+      }
+    })
+    
+    // Handle timer selection - admin selected a timer to display
+    socket.value.on('timer-selected', async (data) => {
+      console.log('Timer selected event:', data)
+      if (data.roomId === room.value?.id || !room.value?.id) {
+        // Store the selected timer ID
+        selectedTimerId.value = data.timerId
+        
+        // If we have timer data in room already, update immediately
+        const timers = room.value?.timers || []
+        const selectedTimer = timers.find(t => t.id === data.timerId)
+        
+        if (selectedTimer) {
+          let remainingTime = 0
+          if (selectedTimer.isActive && selectedTimer.endTimestamp) {
+            const now = new Date().getTime()
+            const endTime = new Date(selectedTimer.endTimestamp).getTime()
+            remainingTime = Math.max(0, Math.floor((endTime - now) / 1000))
+          } else if (selectedTimer.duration) {
+            remainingTime = Math.floor(selectedTimer.duration / 1000)
+          }
+          
+          timer.value = {
+            id: selectedTimer.id,
+            remainingTime: remainingTime,
+            isActive: selectedTimer.isActive || false,
+            isPaused: !selectedTimer.isActive && remainingTime > 0,
+            completionMessage: selectedTimer.completionMessage || null
+          }
+          
+          currentTimerName.value = selectedTimer.title || 'Timer'
+          console.log('Updated timer from timer-selected event:', timer.value)
+        } else {
+          // Timer data not available yet, request sync
+          if (socket.value && socket.value.connected) {
+            socket.value.emit('request-sync')
+          } else {
+            await fetchTimer()
+          }
+        }
       }
     })
     
@@ -239,23 +461,67 @@ const setupSocketListeners = () => {
       if (data.roomId === room.value?.id || !room.value?.id) {
         timer.value.isActive = false
         timer.value.isPaused = false
-        timer.value.remainingTime = 0
+        // Preserve timer duration when stopped (don't reset to 0)
+        // This allows the timer to still be displayed even when not active
+        if (data.duration !== undefined) {
+          timer.value.remainingTime = Math.floor(data.duration / 1000)
+        } else if (timer.value.remainingTime === 0 && data.remainingTime !== undefined) {
+          timer.value.remainingTime = data.remainingTime
+        }
+        // Only reset to 0 if explicitly finished/expired
+        if (data.finished) {
+          timer.value.remainingTime = 0
+        }
         stopCountdown()
       }
     })
     
     socket.value.on('room-state', (data) => {
-      if (data.id === room.value?.id) {
+      // More robust room matching - check by ID or shareToken
+      const isRoomMatch = 
+        (data.id && room.value?.id && String(data.id) === String(room.value.id)) ||
+        (data.shareToken && String(data.shareToken) === String(route.params.shareToken)) ||
+        (data.shareToken && room.value?.shareToken && String(data.shareToken) === String(room.value.shareToken))
+      
+      if (isRoomMatch) {
         room.value = data
         
-        // Update room settings
-        showTimerName.value = data.showTimerName ?? true
+        // Update room settings - always update from room-state as it's the source of truth
+        if (data.showTimerName !== undefined) {
+          showTimerName.value = Boolean(data.showTimerName)
+          console.log('Show timer name updated from room-state:', showTimerName.value)
+        }
         
         const timers = data.timers || data.room?.timers || []
         
+        console.log('Received room-state with timers:', timers)
+        
         if (timers.length > 0) {
-          // Show the latest active timer, or the first timer if none are active
-          const targetTimer = timers.find(t => t.isActive) || timers[timers.length - 1]
+          // Sort timers by order (ascending), then by createdAt as fallback
+          const sortedTimers = [...timers].sort((a, b) => {
+            const orderDiff = (a.order || 0) - (b.order || 0)
+            if (orderDiff !== 0) return orderDiff
+            // If order is same, sort by creation date
+            return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
+          })
+          
+          // Priority: 1. Selected timer (if exists), 2. Active timer, 3. First timer
+          let targetTimer = null
+          
+          // If there's a selected timer ID, try to find it first
+          if (selectedTimerId.value) {
+            targetTimer = sortedTimers.find(t => t.id === selectedTimerId.value)
+          }
+          
+          // If no selected timer or selected timer not found, find active timer
+          if (!targetTimer) {
+            targetTimer = sortedTimers.find(t => t.isActive)
+          }
+          
+          // If still no timer, use the first one
+          if (!targetTimer) {
+            targetTimer = sortedTimers[0]
+          }
           
           if (targetTimer) {
             let remainingTime = 0
@@ -272,17 +538,20 @@ const setupSocketListeners = () => {
               id: targetTimer.id,
               remainingTime: remainingTime,
               isActive: targetTimer.isActive,
-              isPaused: !targetTimer.isActive && remainingTime > 0
+              isPaused: !targetTimer.isActive && remainingTime > 0,
+              completionMessage: targetTimer.completionMessage || null
             }
             
             // Update current timer name
             currentTimerName.value = targetTimer.title || 'Timer'
+            
+            console.log('Timer updated from room-state:', timer.value)
           } else {
-            timer.value = { id: null, remainingTime: 0, isActive: false, isPaused: false }
+            timer.value = { id: null, remainingTime: 0, isActive: false, isPaused: false, completionMessage: null }
             currentTimerName.value = ''
           }
         } else {
-          timer.value = { id: null, remainingTime: 0, isActive: false, isPaused: false }
+          timer.value = { id: null, remainingTime: 0, isActive: false, isPaused: false, completionMessage: null }
           currentTimerName.value = ''
         }
       }
@@ -309,10 +578,48 @@ const setupSocketListeners = () => {
     
     // Handle room setting changes
     socket.value.on('room-setting-changed', (data) => {
-      if (data.roomId === room.value?.id) {
+      console.log('Room setting changed event received:', data)
+      console.log('Current room ID:', room.value?.id)
+      console.log('Event room ID:', data.roomId)
+      console.log('Current shareToken:', room.value?.shareToken)
+      console.log('Event shareToken:', data.shareToken)
+      console.log('Route shareToken:', route.params.shareToken)
+      
+      // More robust room matching - check all possible ways to match
+      const eventRoomId = data.roomId ? String(data.roomId).trim() : ''
+      const currentRoomId = room.value?.id ? String(room.value.id).trim() : ''
+      const eventShareToken = data.shareToken ? String(data.shareToken).trim() : ''
+      const currentShareToken = room.value?.shareToken ? String(room.value.shareToken).trim() : ''
+      const routeShareToken = route.params.shareToken ? String(route.params.shareToken).trim() : ''
+      
+      // Check if the event is for this room by comparing IDs or shareToken
+      const isRoomMatch = 
+        (eventRoomId && currentRoomId && eventRoomId === currentRoomId) ||
+        (eventRoomId && eventRoomId === routeShareToken) || // Sometimes roomId might match shareToken in edge cases
+        (eventShareToken && eventShareToken === routeShareToken) ||
+        (eventShareToken && currentShareToken && eventShareToken === currentShareToken) ||
+        (eventRoomId && currentRoomId && eventRoomId.toLowerCase() === currentRoomId.toLowerCase()) // Case-insensitive match
+      
+      console.log('Room match result:', isRoomMatch)
+      
+      if (isRoomMatch) {
+        console.log('Room match confirmed, updating setting:', data.setting, '=', data.value)
         if (data.setting === 'showTimerName') {
-          showTimerName.value = data.value
+          showTimerName.value = Boolean(data.value)
+          console.log('Show timer name updated to:', showTimerName.value)
         }
+      } else {
+        console.log('Room ID mismatch - ignoring event')
+        console.log('Comparison details:', {
+          eventRoomId,
+          currentRoomId,
+          eventShareToken,
+          currentShareToken,
+          routeShareToken,
+          eventRoomIdMatchesCurrent: eventRoomId === currentRoomId,
+          eventShareTokenMatchesRoute: eventShareToken === routeShareToken,
+          eventShareTokenMatchesCurrent: eventShareToken === currentShareToken
+        })
       }
     })
     
@@ -396,6 +703,14 @@ onMounted(async () => {
   await new Promise(resolve => setTimeout(resolve, 500))
   
   joinRoom({ shareToken: route.params.shareToken, userId: null })
+  
+  // Request fresh room state from server to ensure we have the latest timer data
+  setTimeout(() => {
+    if (socket.value && socket.value.connected) {
+      socket.value.emit('request-sync')
+      console.log('Requested room state sync after connection')
+    }
+  }, 1000)
   
 })
 

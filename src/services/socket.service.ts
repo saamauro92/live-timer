@@ -24,31 +24,28 @@ export class SocketService {
   private io: SocketServer;
   private roomConnections = new Map<string, Set<string>>(); // roomId -> Set of socketIds
   private connectionDetails = new Map<string, UserConnectionInfo>(); // socketId -> ConnectionInfo
+  private roomOwners = new Map<string, string>(); // roomId -> ownerId
+  private socketRoomOwners = new Map<string, string>(); // socketId -> roomOwnerId (for quick lookup)
 
   constructor(server: Server) {
-    logger.info('Initializing Socket.IO server...');
+    logger.info("Initializing Socket.IO server...");
     this.io = new SocketServer(server, {
       cors: {
-        origin: [
-          "http://localhost:3000",
-          "http://localhost:5173", 
-          "http://localhost:3001",
-          process.env.CORS_ORIGIN || "http://localhost:3000"
-        ],
-        methods: ['GET', 'POST'],
-        credentials: true
+        origin: ["http://localhost:3000", "http://localhost:5173", "http://localhost:3001", process.env.CORS_ORIGIN || "http://localhost:3000"],
+        methods: ["GET", "POST"],
+        credentials: true,
       },
       pingTimeout: 60000,
       pingInterval: 25000,
-      transports: ['websocket', 'polling']
+      transports: ["websocket", "polling"],
     });
-    logger.info('Socket.IO server initialized with CORS origin:', process.env.CORS_ORIGIN || "http://localhost:3000");
+    logger.info("Socket.IO server initialized with CORS origin:", process.env.CORS_ORIGIN || "http://localhost:3000");
 
     // Redis adapter for horizontal scaling
-    if (process.env.NODE_ENV === 'production') {
+    if (process.env.NODE_ENV === "production") {
       const subClient = redisClient.duplicate();
       this.io.adapter(createAdapter(redisClient, subClient));
-      logger.info('Socket.IO Redis adapter enabled for scaling');
+      logger.info("Socket.IO Redis adapter enabled for scaling");
     }
 
     this.setupAuthentication();
@@ -58,10 +55,10 @@ export class SocketService {
 
   private createConnectionInfo(socket: Socket, userData?: any): UserConnectionInfo {
     try {
-      const userAgent = socket.handshake.headers['user-agent'] || '';
+      const userAgent = socket.handshake.headers["user-agent"] || "";
       const parsedUA = parseUserAgent(userAgent);
-      const ip = socket.handshake.address || socket.conn.remoteAddress || 'unknown';
-      
+      const ip = socket.handshake.address || socket.conn.remoteAddress || "unknown";
+
       return {
         socketId: socket.id,
         userId: userData?.id,
@@ -72,22 +69,22 @@ export class SocketService {
         connectedAt: new Date(),
         lastSeen: new Date(),
         isOnline: true,
-        user: userData
+        user: userData,
       };
     } catch (error) {
-      logger.error('Error creating connection info:', error);
+      logger.error("Error creating connection info:", error);
       // Return fallback connection info
       return {
         socketId: socket.id,
         userId: userData?.id,
-        userAgent: 'Unknown',
-        browser: 'Unknown',
-        os: 'Unknown',
-        ip: 'unknown',
+        userAgent: "Unknown",
+        browser: "Unknown",
+        os: "Unknown",
+        ip: "unknown",
         connectedAt: new Date(),
         lastSeen: new Date(),
         isOnline: true,
-        user: userData
+        user: userData,
       };
     }
   }
@@ -96,7 +93,7 @@ export class SocketService {
     this.io.use(async (socket, next) => {
       try {
         const token = socket.handshake.auth.token;
-        
+
         if (!token) {
           // Allow anonymous connections for public room viewing
           next();
@@ -105,14 +102,14 @@ export class SocketService {
 
         const jwtSecret = process.env.JWT_SECRET;
         if (!jwtSecret) {
-          logger.error('JWT_SECRET not configured');
-          next(new Error('Server configuration error'));
+          logger.error("JWT_SECRET not configured");
+          next(new Error("Server configuration error"));
           return;
         }
 
         // Verify JWT token
         const decoded = jwt.verify(token, jwtSecret) as any;
-        
+
         // Fetch user from database
         const user = await prisma.user.findUnique({
           where: { id: decoded.id },
@@ -123,12 +120,12 @@ export class SocketService {
             role: true,
             emailVerified: true,
             banned: true,
-            banExpires: true
-          }
+            banExpires: true,
+          },
         });
 
         if (!user) {
-          next(new Error('User not found'));
+          next(new Error("User not found"));
           return;
         }
 
@@ -136,7 +133,7 @@ export class SocketService {
         if (user.banned) {
           const now = new Date();
           if (!user.banExpires || user.banExpires > now) {
-            next(new Error('Account is banned'));
+            next(new Error("Account is banned"));
             return;
           }
         }
@@ -147,20 +144,20 @@ export class SocketService {
           email: user.email,
           name: user.name,
           role: user.role || undefined,
-          emailVerified: user.emailVerified
+          emailVerified: user.emailVerified,
         };
 
         logger.info(`Socket authenticated for user: ${user.email} (${user.id})`);
         next();
       } catch (error) {
-        logger.error('Socket authentication failed:', error);
-        next(new Error('Authentication failed'));
+        logger.error("Socket authentication failed:", error);
+        next(new Error("Authentication failed"));
       }
     });
   }
 
   private setupEventHandlers(): void {
-    this.io.on('connection', (socket: Socket) => {
+    this.io.on("connection", (socket: Socket) => {
       logger.info(`Client connected: ${socket.id}`);
       logger.info(`Socket handshake auth:`, socket.handshake.auth);
       logger.info(`Socket handshake headers:`, socket.handshake.headers);
@@ -173,19 +170,19 @@ export class SocketService {
       });
 
       // JOIN ROOM - Both admin and viewers use this
-      socket.on('join-room', async (data: JoinRoomData) => {
+      socket.on("join-room", async (data: JoinRoomData) => {
         try {
           logger.info(`Socket ${socket.id} attempting to join room with shareToken: ${data.shareToken}`);
           const room = await roomService.findByShareTokenWithTimers(data.shareToken);
           if (!room) {
             logger.warn(`Room not found for shareToken: ${data.shareToken}`);
-            socket.emit('error', { message: 'Room not found' });
+            socket.emit("error", { message: "Room not found" });
             return;
           }
 
           const roomKey = `room:${room.id}`;
           logger.info(`Socket ${socket.id} joining room: ${roomKey} (room ID: ${room.id})`);
-          
+
           // Leave any previous rooms first
           const socketData = socket.data as SocketData;
           if (socketData.roomId) {
@@ -199,7 +196,7 @@ export class SocketService {
               }
             }
           }
-          
+
           socket.join(roomKey);
 
           // Get user ID from authenticated socket data or from request
@@ -207,12 +204,18 @@ export class SocketService {
 
           // Create detailed connection info
           const connectionInfo = this.createConnectionInfo(socket, socketData.user);
-          
+
           // Store connection data
           socketData.roomId = room.id;
           socketData.userId = userId;
           socketData.isAdmin = userId === room.ownerId;
           socketData.connectionInfo = connectionInfo;
+
+          // Store room owner for filtering admin connections
+          this.roomOwners.set(room.id, room.ownerId);
+          if (socketData.isAdmin) {
+            this.socketRoomOwners.set(socket.id, room.ownerId);
+          }
 
           // Track connection
           if (!this.roomConnections.has(roomKey)) {
@@ -222,120 +225,156 @@ export class SocketService {
           this.connectionDetails.set(socket.id, connectionInfo);
 
           // Send initial room state with all timers
-          socket.emit('room-state', {
+          socket.emit("room-state", {
             ...room,
-            isAdmin: socketData.isAdmin
+            isAdmin: socketData.isAdmin,
           });
 
-          // Broadcast user count and connection details to all room members
-          const userCount = this.roomConnections.get(roomKey)!.size;
-          const connections = this.getRoomConnections(room.id);
-          
-          const userJoinedEvent: UserJoinedEvent = {
-            roomId: room.id,
-            connection: connectionInfo,
-            totalUsers: userCount
-          };
-          
+          // Get viewer-only connections (excluding admin)
+          const viewerConnections = this.getViewerConnections(room.id);
+          const viewerCount = viewerConnections.length;
+
+          // Only send user-joined event if this is a viewer (not admin)
+          // Admin connections should not trigger viewer count updates
+          if (!socketData.isAdmin) {
+            const userJoinedEvent: UserJoinedEvent = {
+              roomId: room.id,
+              connection: connectionInfo,
+              totalUsers: viewerCount, // Use viewer count instead of total
+            };
+            this.io.to(roomKey).emit("user-joined", userJoinedEvent);
+          }
+
           const userCountUpdate: UserCountUpdateEvent = {
             roomId: room.id,
-            count: userCount,
-            connections
+            count: viewerCount, // Use viewer count instead of total
+            connections: viewerConnections, // Only viewer connections
           };
-          
-          logger.info(`Broadcasting user-count: ${userCount} to room: ${roomKey}`);
-          this.io.to(roomKey).emit('user-count', userCount);
-          this.io.to(roomKey).emit('user-joined', userJoinedEvent);
-          this.io.to(roomKey).emit('user-count-update', userCountUpdate);
+
+          logger.info(`Broadcasting viewer-count: ${viewerCount} to room: ${roomKey} (admin excluded: ${socketData.isAdmin})`);
+          this.io.to(roomKey).emit("user-count", viewerCount); // Send viewer count
+          this.io.to(roomKey).emit("user-count-update", userCountUpdate);
 
           // Send a test event to verify the connection works
-          socket.emit('test-event', {
-            message: 'Successfully joined room',
+          socket.emit("test-event", {
+            message: "Successfully joined room",
             roomId: room.id,
             shareToken: data.shareToken,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
           });
 
-          logger.info(`User joined room ${room.id} as ${socketData.isAdmin ? 'admin' : 'viewer'}`);
-          logger.info(`Room ${roomKey} now has ${userCount} connected users`);
+          logger.info(`User joined room ${room.id} as ${socketData.isAdmin ? "admin" : "viewer"}`);
+          logger.info(`Room ${roomKey} now has ${viewerCount} viewers (excluding admin)`);
         } catch (error) {
-          logger.error('Error joining room:', error);
-          socket.emit('error', { message: 'Failed to join room' });
+          logger.error("Error joining room:", error);
+          socket.emit("error", { message: "Failed to join room" });
         }
       });
 
       // HEARTBEAT - Keep connection alive and sync state
-      socket.on('ping', () => {
-        socket.emit('pong');
+      socket.on("ping", () => {
+        socket.emit("pong");
       });
 
       // SYNC REQUEST - Manual sync when needed
-      socket.on('request-sync', async () => {
+      socket.on("request-sync", async () => {
         const socketData = socket.data as SocketData;
         if (socketData.roomId) {
           try {
             const room = await roomService.findByIdWithTimers(socketData.roomId);
             if (room) {
-              socket.emit('room-state', {
+              socket.emit("room-state", {
                 ...room,
-                isAdmin: socketData.isAdmin
+                isAdmin: socketData.isAdmin,
               });
             }
           } catch (error) {
-            logger.error('Error syncing room state:', error);
-            socket.emit('error', { message: 'Failed to sync room state' });
+            logger.error("Error syncing room state:", error);
+            socket.emit("error", { message: "Failed to sync room state" });
           }
         }
       });
 
-      // DISCONNECT HANDLER
-      socket.on('disconnect', () => {
+      // TIMER SELECTION - Admin selects a timer to display
+      socket.on("timer-selected", (data: { roomId: string; timerId: string }) => {
         const socketData = socket.data as SocketData;
-        
+
+        // Only allow admins to select timers
+        if (!socketData.isAdmin) {
+          logger.warn(`Non-admin user ${socket.id} attempted to select timer`);
+          socket.emit("error", { message: "Only room admin can select timers" });
+          return;
+        }
+
+        if (socketData.roomId === data.roomId) {
+          const roomKey = `room:${socketData.roomId}`;
+          // Broadcast timer selection to all room members (including viewers)
+          this.io.to(roomKey).emit("timer-selected", {
+            roomId: data.roomId,
+            timerId: data.timerId,
+          });
+          logger.info(`Timer ${data.timerId} selected in room ${data.roomId} by admin`);
+        }
+      });
+
+      // DISCONNECT HANDLER
+      socket.on("disconnect", () => {
+        const socketData = socket.data as SocketData;
+
         if (socketData.roomId) {
           const roomKey = `room:${socketData.roomId}`;
           const connections = this.roomConnections.get(roomKey);
-          
+
           if (connections) {
             connections.delete(socket.id);
-            
+
             // Leave the room
             socket.leave(roomKey);
-            
-            // Get updated connection details
-            const updatedConnections = this.getRoomConnections(socketData.roomId);
-            
-            // Broadcast user left event
-            const userLeftEvent: UserLeftEvent = {
-              roomId: socketData.roomId,
-              socketId: socket.id,
-              totalUsers: connections.size
-            };
-            
+
+            // Check if this was an admin connection before cleanup
+            const wasAdmin = this.socketRoomOwners.has(socket.id);
+
+            // Clean up socket owner mapping before calculating viewer count
+            this.socketRoomOwners.delete(socket.id);
+
+            // Get viewer-only connections (excluding admin) - calculate after cleanup
+            const viewerConnections = this.getViewerConnections(socketData.roomId);
+            const viewerCount = viewerConnections.length;
+
+            // Only send user-left event if this was a viewer (not admin)
+            // Admin disconnections should not trigger viewer count updates
+            if (!wasAdmin) {
+              const userLeftEvent: UserLeftEvent = {
+                roomId: socketData.roomId,
+                socketId: socket.id,
+                totalUsers: viewerCount, // Use viewer count instead of total
+              };
+              this.io.to(roomKey).emit("user-left", userLeftEvent);
+            }
+
             const userCountUpdate: UserCountUpdateEvent = {
               roomId: socketData.roomId,
-              count: connections.size,
-              connections: updatedConnections
+              count: viewerCount, // Use viewer count instead of total
+              connections: viewerConnections, // Only viewer connections
             };
-            
-            // Update user count
-            logger.info(`Broadcasting user-count: ${connections.size} to room: ${roomKey} (disconnect)`);
-            this.io.to(roomKey).emit('user-count', connections.size);
-            this.io.to(roomKey).emit('user-left', userLeftEvent);
-            this.io.to(roomKey).emit('user-count-update', userCountUpdate);
-            
+
+            // Always broadcast count update (even if admin left, count might change due to cleanup)
+            logger.info(`Broadcasting viewer-count: ${viewerCount} to room: ${roomKey} (disconnect, wasAdmin: ${wasAdmin})`);
+            this.io.to(roomKey).emit("user-count", viewerCount); // Send viewer count
+            this.io.to(roomKey).emit("user-count-update", userCountUpdate);
+
             // Clean up empty rooms
             if (connections.size === 0) {
               this.roomConnections.delete(roomKey);
             }
-            
+
             logger.info(`User left room ${socketData.roomId}, ${connections.size} users remaining`);
           }
         }
-        
+
         // Clean up connection details
         this.connectionDetails.delete(socket.id);
-        
+
         logger.info(`Client disconnected: ${socket.id}`);
       });
     });
@@ -346,53 +385,83 @@ export class SocketService {
     const roomKey = `room:${roomId}`;
     const connections = this.roomConnections.get(roomKey);
     const connectedCount = connections ? connections.size : 0;
-    
+
     // Debug: Log all rooms and their connections
     logger.info(`All room connections:`, Array.from(this.roomConnections.entries()));
     logger.info(`Target room key: ${roomKey}`);
-    logger.info(`Target room connections:`, connections ? Array.from(connections) : 'No connections');
-    
+    logger.info(`Target room connections:`, connections ? Array.from(connections) : "No connections");
+
     this.io.to(roomKey).emit(event, data);
-    logger.info(`Broadcasting ${event} to room ${roomId} (${connectedCount} connected users)`, { 
-      event, 
-      roomId, 
+    logger.info(`Broadcasting ${event} to room ${roomId} (${connectedCount} connected users)`, {
+      event,
+      roomId,
       connectedUsers: connectedCount,
       data: {
         timerId: data.timerId,
         isActive: data.isActive,
-        remainingTime: data.remainingTime
-      }
+        remainingTime: data.remainingTime,
+      },
     });
   }
 
-  // Get room statistics
+  // Get room statistics (returns viewer count, excluding admin)
   public getRoomStats(roomId: string): RoomStats {
     const roomKey = `room:${roomId}`;
     const connections = this.roomConnections.get(roomKey);
-    const connectionDetails = this.getRoomConnections(roomId);
-    
+    const viewerConnections = this.getViewerConnections(roomId);
+
     return {
-      connectedUsers: connections ? connections.size : 0,
+      connectedUsers: viewerConnections.length, // Viewer count only
       isActive: connections ? connections.size > 0 : false,
-      connections: connectionDetails
+      connections: viewerConnections, // Only viewer connections
     };
   }
 
-  // Get detailed connection information for a room
+  // Get detailed connection information for a room (all connections)
   private getRoomConnections(roomId: string): UserConnectionInfo[] {
     const roomKey = `room:${roomId}`;
     const socketIds = this.roomConnections.get(roomKey);
-    
+
     if (!socketIds) {
       return [];
     }
-    
+
     return Array.from(socketIds)
-      .map(socketId => this.connectionDetails.get(socketId))
+      .map((socketId) => this.connectionDetails.get(socketId))
       .filter((info): info is UserConnectionInfo => info !== undefined)
-      .map(info => ({
+      .map((info) => ({
         ...info,
-        lastSeen: new Date() // Update last seen time
+        lastSeen: new Date(), // Update last seen time
+      }));
+  }
+
+  // Get viewer-only connections (excluding admin/room owner)
+  private getViewerConnections(roomId: string): UserConnectionInfo[] {
+    const roomKey = `room:${roomId}`;
+    const socketIds = this.roomConnections.get(roomKey);
+    const ownerId = this.roomOwners.get(roomId);
+
+    if (!socketIds) {
+      return [];
+    }
+
+    return Array.from(socketIds)
+      .map((socketId) => this.connectionDetails.get(socketId))
+      .filter((info): info is UserConnectionInfo => info !== undefined)
+      .filter((info) => {
+        // Exclude admin connections (where userId matches room owner)
+        if (ownerId && info.userId === ownerId) {
+          return false;
+        }
+        // Also check socket owner mapping as fallback
+        if (this.socketRoomOwners.has(info.socketId)) {
+          return false;
+        }
+        return true;
+      })
+      .map((info) => ({
+        ...info,
+        lastSeen: new Date(), // Update last seen time
       }));
   }
 
@@ -400,10 +469,10 @@ export class SocketService {
   public getAllRoomStats(): Record<string, RoomStats> {
     const stats: Record<string, RoomStats> = {};
     this.roomConnections.forEach((connections, roomKey) => {
-      const roomId = roomKey.replace('room:', '');
+      const roomId = roomKey.replace("room:", "");
       stats[roomId] = {
         connectedUsers: connections.size,
-        isActive: connections.size > 0
+        isActive: connections.size > 0,
       };
     });
     return stats;
@@ -425,18 +494,19 @@ export class SocketService {
         const expiredTimers = await timerService.getExpiredTimers();
         for (const timer of expiredTimers) {
           await this.handleTimerExpiration(timer);
-          
+
           // Send timer-finished event
-          this.emitToRoom(timer.roomId, 'timer-finished', {
+          this.emitToRoom(timer.roomId, "timer-finished", {
             timerId: timer.id,
             title: timer.title,
-            roomId: timer.roomId
+            roomId: timer.roomId,
+            completionMessage: timer.completionMessage || null,
           });
-          
+
           logger.info(`Timer ${timer.id} expired and marked as inactive`);
         }
       } catch (error) {
-        logger.error('Error in expired timer cleanup:', error);
+        logger.error("Error in expired timer cleanup:", error);
       }
     }, 30000); // Check every 30 seconds
   }
@@ -448,14 +518,14 @@ export class SocketService {
       await timerService.markAsExpired(timer.id);
       return false;
     } catch (error) {
-      logger.error('Error handling timer expiration:', error);
+      logger.error("Error handling timer expiration:", error);
       return false;
     }
   }
 
   // Graceful shutdown
   public async close(): Promise<void> {
-    logger.info('Closing Socket.IO server...');
+    logger.info("Closing Socket.IO server...");
     this.io.close();
   }
 }

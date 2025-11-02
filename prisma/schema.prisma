@@ -135,16 +135,17 @@ model Room {
 }
 
 model Timer {
-  id             String   @id @default(uuid()) @db.Uuid
-  roomId         String   @db.Uuid
-  title          String   @db.VarChar(200)
-  description    String?  @db.Text
-  startTimestamp DateTime @db.Timestamptz
-  endTimestamp   DateTime @db.Timestamptz
-  duration       Int      // milliseconds
-  isActive       Boolean  @default(false)
-  order          Int      @default(0) // For ordering timers in the room
-  createdAt      DateTime @default(now()) @db.Timestamptz
+  id               String   @id @default(uuid()) @db.Uuid
+  roomId           String   @db.Uuid
+  title            String   @db.VarChar(200)
+  description      String?  @db.Text
+  completionMessage String? @db.Text // Message to display when timer reaches 0
+  startTimestamp   DateTime @db.Timestamptz
+  endTimestamp     DateTime @db.Timestamptz
+  duration         Int      // milliseconds
+  isActive         Boolean  @default(false)
+  order            Int      @default(0) // For ordering timers in the room
+  createdAt        DateTime @default(now()) @db.Timestamptz
   
   room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
   

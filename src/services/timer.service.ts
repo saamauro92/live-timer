@@ -24,6 +24,7 @@ export class TimerService {
           roomId: data.roomId,
           title: data.title,
           description: data.description,
+          completionMessage: data.completionMessage,
           startTimestamp: now,
           endTimestamp: new Date(now.getTime() + data.duration),
           duration: data.duration,
@@ -124,6 +125,7 @@ export class TimerService {
       
       if (data.title) updateData.title = data.title;
       if (data.description !== undefined) updateData.description = data.description;
+      if (data.completionMessage !== undefined) updateData.completionMessage = data.completionMessage;
       
       if (data.duration && validateDuration(data.duration)) {
         updateData.duration = data.duration;

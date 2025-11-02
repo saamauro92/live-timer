@@ -23,21 +23,6 @@
             </div>
           </div>
           <div class="flex items-center space-x-3">
-            <div class="flex items-center space-x-2 bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded-lg">
-              <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-              </svg>
-              <span class="text-sm font-mono text-gray-700 dark:text-gray-300">{{ room?.shareToken }}</span>
-            <button 
-              @click="copyRoomCode"
-                class="text-blue-600 hover:text-blue-800 transition-colors"
-                title="Copy room code"
-            >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-                </svg>
-            </button>
-          </div>
           <button 
             @click="shareRoom"
               class="btn-secondary flex items-center"
@@ -46,15 +31,6 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"></path>
               </svg>
               Share
-          </button>
-          <button 
-            @click="leaveRoom"
-              class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center transition-colors"
-          >
-              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-              </svg>
-              Leave
           </button>
           </div>
         </div>
@@ -85,74 +61,106 @@
               </div>
             </div>
             
-            <!-- Preview Content -->
+            <!-- Preview Content - Matches shareable link display -->
             <div class="p-4">
-              <div class="bg-gray-900 rounded-lg p-4 min-h-[200px] relative overflow-hidden">
-                <!-- Simulated viewer interface -->
-                <div class="text-center">
-                  <div class="mb-4">
-                    <h4 class="text-white text-lg font-bold">{{ room?.name }}</h4>
-                    <p class="text-gray-400 text-sm">{{ room?.description }}</p>
+              <div class="bg-black rounded-lg relative overflow-hidden aspect-[16/9]">
+                <!-- Logo - Top Left (like shareable link) -->
+                <div class="absolute top-3 left-3 z-10">
+                  <div class="flex items-center">
+                    <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                      <span class="text-white font-bold text-xs">LT</span>
+                    </div>
+                    <span class="ml-2 text-sm font-semibold text-white">
+                      Live Timer
+                    </span>
                   </div>
-                  
-                  <!-- Live timers display -->
-                  <div v-if="timers.length > 0" class="space-y-3">
-                    <div 
-                      v-for="timer in timers.slice(0, 2)" 
-                      :key="timer.id"
-                      class="bg-gray-800 rounded-lg p-3 border border-gray-700"
-                    >
-                      <div class="text-white font-semibold text-sm mb-1">{{ timer.title }}</div>
-                      <div class="text-2xl font-mono font-bold text-green-400 mb-2">
-                        {{ formatTime(timer.remainingTime) }}
-                      </div>
-                      <div class="flex items-center justify-center">
-                        <div v-if="timer.isActive" class="flex items-center text-green-400">
-                          <div class="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
-                          <span class="text-xs">Running</span>
-                        </div>
-                        <div v-else-if="timer.isPaused" class="flex items-center text-yellow-400">
-                          <div class="w-2 h-2 bg-yellow-400 rounded-full mr-2"></div>
-                          <span class="text-xs">Paused</span>
-                        </div>
-                        <div v-else class="flex items-center text-gray-400">
-                          <div class="w-2 h-2 bg-gray-400 rounded-full mr-2"></div>
-                          <span class="text-xs">Ready</span>
-                        </div>
-                      </div>
+                </div>
+
+                <!-- Timer Name - Top Center (if enabled and timer exists) -->
+                <div v-if="showTimerName && displayTimer?.title" class="absolute top-3 left-1/2 transform -translate-x-1/2 z-10">
+                  <h1 class="text-sm font-bold text-center" :class="displayTimer.isActive ? 'text-blue-400' : 'text-gray-400'">
+                    {{ displayTimer.title }}
+                  </h1>
+                </div>
+
+                <!-- Main Timer Display - Center (matches shareable link) -->
+                <div v-if="displayTimer" class="flex flex-col items-center justify-center h-full">
+                  <!-- Large Countdown Timer -->
+                  <div 
+                    class="font-mono font-bold text-center transition-all duration-500"
+                    :class="[
+                      displayTimer.isActive 
+                        ? (currentLiveMessage ? 'text-4xl' : 'text-5xl')
+                        : (currentLiveMessage ? 'text-3xl' : 'text-4xl'),
+                      displayTimer.isActive ? 'text-white' : 'text-gray-500'
+                    ]"
+                    :style="{ 
+                      fontSize: displayTimer.isActive 
+                        ? (currentLiveMessage ? '3rem' : '4rem')
+                        : (currentLiveMessage ? '2.5rem' : '3rem'),
+                      lineHeight: '1',
+                      textShadow: displayTimer.isActive ? '0 0 20px rgba(255, 255, 255, 0.4)' : '0 0 10px rgba(255, 255, 255, 0.2)'
+                    }"
+                  >
+                    {{ formatTime(displayTimer.remainingTime) }}
+                  </div>
+
+                  <!-- Completion Message Display (when timer reaches 0) -->
+                  <div 
+                    v-if="displayTimer.remainingTime === 0 && displayTimer.completionMessage" 
+                    class="mt-4 text-center animate-fadeIn"
+                  >
+                    <div class="text-yellow-400 font-semibold text-xs md:text-sm">
+                      {{ displayTimer.completionMessage }}
                     </div>
                   </div>
-                  
-                  <!-- No timers state -->
-                  <div v-else class="text-center py-8">
-                    <div class="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-3">
+
+                  <!-- Live Message Display (if exists) -->
+                  <div 
+                    v-if="currentLiveMessage && displayTimer.remainingTime > 0" 
+                    class="mt-4 text-center"
+                  >
+                    <div class="text-green-400 font-semibold text-xs md:text-sm">
+                      {{ currentLiveMessage }}
+                    </div>
+                  </div>
+
+                  <!-- Timer Status Indicator -->
+                  <div v-if="displayTimer.isActive" class="mt-3 flex items-center justify-center">
+                    <div class="flex items-center text-green-400">
+                      <div class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
+                      <span class="text-xs font-medium">LIVE</span>
+                    </div>
+                  </div>
+                  <div v-else-if="displayTimer.remainingTime > 0" class="mt-3 flex items-center justify-center">
+                    <div class="flex items-center text-gray-500">
+                      <div class="w-2 h-2 bg-gray-500 rounded-full mr-2"></div>
+                      <span class="text-xs font-medium">READY</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- No Timer State -->
+                <div v-else class="flex flex-col items-center justify-center h-full">
+                  <div class="text-center">
+                    <div class="w-12 h-12 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-3">
                       <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                       </svg>
                     </div>
-                    <p class="text-gray-400 text-sm">No active timers</p>
-                  </div>
-                  
-                  <!-- Live message display -->
-                  <div v-if="currentLiveMessage" class="mt-4 p-3 bg-blue-900/50 border border-blue-700 rounded-lg">
-                    <div class="flex items-center mb-2">
-                      <div class="w-2 h-2 bg-blue-400 rounded-full mr-2 animate-pulse"></div>
-                      <span class="text-blue-400 text-xs font-medium">Live Message</span>
-                    </div>
-                    <p class="text-white text-sm">{{ currentLiveMessage }}</p>
+                    <h2 class="text-lg font-bold text-gray-300 mb-2">No Active Timer</h2>
+                    <p class="text-sm text-gray-400">Waiting for timer to start...</p>
                   </div>
                 </div>
                 
                 <!-- Overlay with connection info -->
-                <div class="absolute top-2 right-2 bg-black/50 backdrop-blur-sm rounded-lg px-2 py-1">
+                <div class="absolute bottom-2 right-2 bg-black/50 backdrop-blur-sm rounded-lg px-2 py-1">
                   <div class="flex items-center space-x-2">
                     <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                     <span class="text-white text-xs">{{ liveViewerCount }} viewers</span>
                   </div>
                 </div>
               </div>
-              
-
             </div>
           </div>
           
@@ -188,6 +196,23 @@
                 placeholder="Enter timer name"
               />
             </div>
+
+                <!-- Completion Message Input -->
+                <div class="mb-4">
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center">
+                    <span class="mr-2">Completion Message</span>
+                    <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                  </label>
+                  <textarea
+                    v-model="newTimer.completionMessage"
+                    rows="2"
+                    class="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-sm resize-none"
+                    placeholder="Optional: Message to display when timer reaches 0"
+                  />
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">This message will be displayed when the timer completes</p>
+                </div>
 
                 <!-- Duration Input - Image Style -->
                 <div class="mb-4">
@@ -436,42 +461,36 @@
                 </div>
 
               <!-- Master Play/Stop Controls (Music Player Style) -->
-                <div class="flex flex-col sm:flex-row items-center space-y-3 sm:space-y-0 sm:space-x-4">
-                <!-- Play/Pause Button -->
-                <button 
-                  @click="playSelectedTimer"
-                  :disabled="!selectedTimerId"
-                    :class="['flex items-center justify-center w-14 h-14 rounded-full transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg transform hover:scale-105',
-                    getPlayButtonClass()
-                  ]"
-                >
-                    <svg v-if="getPlayButtonIcon() === 'play'" class="w-7 h-7 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M8 5v14l11-7z"/>
-                  </svg>
-                    <svg v-else-if="getPlayButtonIcon() === 'pause'" class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
-                  </svg>
-                    <svg v-else class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M8 5v14l11-7z"/>
-                  </svg>
-                </button>
+                <div class="flex flex-col sm:flex-row items-center justify-center space-y-3 sm:space-y-0 sm:space-x-4">
+                  <!-- Play/Pause Button -->
+                  <button 
+                    @click="playSelectedTimer"
+                    :disabled="!selectedTimerId"
+                      :class="['flex items-center justify-center w-14 h-14 rounded-full transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg',
+                      getPlayButtonClass()
+                    ]"
+                  >
+                      <svg v-if="getPlayButtonIcon() === 'play'" class="w-7 h-7 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M8 5v14l11-7z"/>
+                    </svg>
+                      <svg v-else-if="getPlayButtonIcon() === 'pause'" class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                    </svg>
+                      <svg v-else class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M8 5v14l11-7z"/>
+                    </svg>
+                  </button>
 
-                <!-- Stop Button -->
-                <button 
-                  @click="stopAllTimers"
-                    class="flex items-center justify-center w-12 h-12 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-full transition-all duration-200 shadow-lg transform hover:scale-105"
-                >
-                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M6 6h12v12H6z"/>
-                  </svg>
-                </button>
-
-                <!-- Selected Timer Info -->
-                  <div v-if="selectedTimerId" class="text-sm text-center sm:text-left">
-                    <div class="font-semibold text-gray-900 dark:text-white">{{ getSelectedTimerName() }}</div>
-                    <div class="text-xs text-gray-600 dark:text-gray-400">{{ getSelectedTimerStatus() }}</div>
+                  <!-- Stop Button -->
+                  <button 
+                    @click="stopAllTimers"
+                      class="flex items-center justify-center w-12 h-12 bg-gray-600 hover:bg-gray-700 text-white rounded-full transition-colors duration-200 shadow-lg"
+                  >
+                      <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M6 6h12v12H6z"/>
+                    </svg>
+                  </button>
                 </div>
-              </div>
             </div>
           </div>
 
@@ -497,108 +516,205 @@
               @dragover="handleDragOver($event)"
               @drop="handleDrop($event, index)"
               @dragend="handleDragEnd"
-                :class="['group relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 transform hover:scale-[1.02]',
+                :class="['group relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200',
                 selectedTimerId === timer.id 
                     ? 'border-blue-500 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 shadow-lg' 
                     : 'border-gray-200 dark:border-gray-600 bg-white/50 dark:bg-gray-700/50 hover:border-gray-300 dark:hover:border-gray-500 hover:shadow-md',
                 dragOverIndex === index ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : ''
               ]"
             >
-              <div class="flex items-center justify-between">
-                <div class="flex-1">
-                    <div class="flex items-center space-x-4">
-                    <!-- Drag Handle and Selection Indicator -->
-                    <div class="flex items-center space-x-2">
-                        <!-- Drag Handle -->
-                        <div class="cursor-move text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path>
-                          </svg>
-                        </div>
-                        <!-- Selection Indicator -->
-                        <div :class="['w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200',
-                        selectedTimerId === timer.id 
-                            ? 'border-blue-500 bg-blue-500 shadow-lg' 
-                            : 'border-gray-300 dark:border-gray-600 group-hover:border-blue-400'
-                      ]">
-                          <div v-if="selectedTimerId === timer.id" class="w-2.5 h-2.5 bg-white rounded-full"></div>
-                      </div>
+              <div class="flex items-start justify-between gap-4">
+                <!-- Left: Drag Handle and Selection Indicator -->
+                <div class="flex items-center space-x-2 flex-shrink-0 pt-1">
+                  <div class="cursor-move text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path>
+                    </svg>
+                  </div>
+                  <div :class="['w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 cursor-pointer',
+                    selectedTimerId === timer.id 
+                      ? 'border-blue-500 bg-blue-500 shadow-lg' 
+                      : 'border-gray-300 dark:border-gray-600 group-hover:border-blue-400'
+                  ]" @click.stop="selectTimer(timer.id)">
+                    <div v-if="selectedTimerId === timer.id" class="w-2.5 h-2.5 bg-white rounded-full"></div>
+                  </div>
+                </div>
+                
+                <!-- Center: Timer Info -->
+                <div class="flex-1 min-w-0">
+                  <!-- Timer Name -->
+                  <div class="mb-2">
+                    <h4 class="font-semibold text-gray-900 dark:text-white text-lg truncate">
+                      {{ timer.title }}
+                    </h4>
+                  </div>
+                  
+                  <!-- Timer Display and Status -->
+                  <div class="flex items-center gap-4 mb-3">
+                    <div class="text-3xl font-mono font-bold text-gray-900 dark:text-white">
+                      {{ formatTime(timer.remainingTime) }}
                     </div>
-                    
-                    <!-- Timer Info -->
-                    <div class="flex-1">
-                        <div class="flex items-center space-x-3 mb-2">
-                          <!-- Editable Timer Name -->
-                          <div v-if="editingTimerId === timer.id" class="flex-1">
-                            <input
-                              v-model="editingTimerName"
-                              @blur="saveTimerName(timer.id)"
-                              @keyup.enter="saveTimerName(timer.id)"
-                              @keyup.escape="cancelEditTimerName"
-                              class="w-full px-2 py-1 bg-white dark:bg-gray-800 border border-blue-500 rounded text-lg font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              ref="timerNameInput"
-                            />
-                          </div>
-                          <div v-else class="flex-1 flex items-center space-x-2">
-                            <h4 
-                              @click="startEditTimerName(timer.id, timer.title)"
-                              class="font-semibold text-gray-900 dark:text-white text-lg cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                              title="Click to edit timer name"
-                            >
-                              {{ timer.title }}
-                            </h4>
-                            <button
-                              @click="startEditTimerName(timer.id, timer.title)"
-                              class="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                              title="Edit timer name"
-                            >
-                              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                              </svg>
-                            </button>
-                          </div>
+                    <div class="flex items-center space-x-2">
+                      <div v-if="timer.isActive" class="flex items-center text-green-600 dark:text-green-400">
+                        <div class="w-2.5 h-2.5 bg-green-500 rounded-full mr-1.5 animate-pulse"></div>
+                        <span class="text-sm font-medium">Running</span>
                       </div>
-                        <div class="flex items-center space-x-6">
-                          <div class="text-3xl font-mono font-bold text-gray-900 dark:text-white">
-                          {{ formatTime(timer.remainingTime) }}
-                        </div>
-                        <div class="flex items-center space-x-2">
-                          <div v-if="timer.isActive" class="flex items-center text-green-600 dark:text-green-400">
-                              <div class="w-3 h-3 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-                              <span class="text-sm font-medium">Running</span>
-                          </div>
-                          <div v-else-if="timer.isPaused" class="flex items-center text-yellow-600 dark:text-yellow-400">
-                              <div class="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
-                              <span class="text-sm font-medium">Paused</span>
-                          </div>
-                          <div v-else class="flex items-center text-gray-500 dark:text-gray-400">
-                              <div class="w-3 h-3 bg-gray-400 rounded-full mr-2"></div>
-                              <span class="text-sm font-medium">Ready</span>
-                          </div>
-                        </div>
+                      <div v-else-if="timer.isPaused" class="flex items-center text-yellow-600 dark:text-yellow-400">
+                        <div class="w-2.5 h-2.5 bg-yellow-500 rounded-full mr-1.5"></div>
+                        <span class="text-sm font-medium">Paused</span>
+                      </div>
+                      <div v-else class="flex items-center text-gray-500 dark:text-gray-400">
+                        <div class="w-2.5 h-2.5 bg-gray-400 rounded-full mr-1.5"></div>
+                        <span class="text-sm font-medium">Ready</span>
                       </div>
                     </div>
                   </div>
+                  
+                  <!-- Completion Message Badge -->
+                  <div v-if="timer.completionMessage" class="inline-flex items-center px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg mb-2">
+                    <svg class="w-3 h-3 text-yellow-600 dark:text-yellow-400 mr-1.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                    <span class="text-xs text-yellow-700 dark:text-yellow-300 font-medium truncate max-w-xs">{{ timer.completionMessage }}</span>
+                  </div>
                 </div>
 
-                  <!-- Delete Button -->
-                <div v-if="isAuthenticated" class="flex items-center">
+                <!-- Right: Action Buttons -->
+                <div v-if="isAuthenticated" class="flex items-center gap-2 flex-shrink-0">
+                  <button 
+                    @click.stop="openEditModal(timer)"
+                    :disabled="timer.isActive"
+                    :class="[
+                      'p-2 rounded-lg transition-all duration-200',
+                      timer.isActive 
+                        ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' 
+                        : 'text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-gray-700'
+                    ]"
+                    :title="timer.isActive ? 'Cannot edit timer while running' : 'Edit timer'"
+                  >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                    </svg>
+                  </button>
                   <button 
                     @click.stop="deleteTimer(timer.id)"
-                      class="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white text-sm px-4 py-2 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-md"
+                    class="p-2 text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all duration-200"
+                    title="Delete timer"
                   >
-                      <div class="flex items-center">
-                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                        </svg>
-                    Delete
-                      </div>
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
                   </button>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
+
+          <!-- Edit Timer Modal (outside v-for) -->
+          <Teleport to="body">
+            <div 
+              v-if="editingTimerId" 
+              class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+              @click.self="cancelEditTimerName"
+            >
+              <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+                <!-- Modal Header -->
+                <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                  <h3 class="text-xl font-bold text-gray-900 dark:text-white">Edit Timer</h3>
+                  <button
+                    @click="cancelEditTimerName"
+                    class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                  >
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                  </button>
+                </div>
+                
+                <!-- Modal Content -->
+                <div class="p-6 space-y-6">
+                  <!-- Timer Name -->
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Timer Name
+                    </label>
+                    <input
+                      v-model="editingTimerName"
+                      type="text"
+                      class="w-full px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white"
+                      placeholder="Enter timer name"
+                    />
+                  </div>
+
+                  <!-- Duration -->
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Duration
+                    </label>
+                    <div class="flex items-center space-x-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg p-3">
+                      <input
+                        v-model.number="editingTimerHours"
+                        type="number"
+                        min="0"
+                        max="23"
+                        class="w-16 text-center text-lg font-mono bg-transparent border-none focus:outline-none text-gray-900 dark:text-white"
+                        placeholder="00"
+                      />
+                      <span class="text-gray-400 font-mono text-xl">:</span>
+                      <input
+                        v-model.number="editingTimerMinutes"
+                        type="number"
+                        min="0"
+                        max="59"
+                        class="w-16 text-center text-lg font-mono bg-transparent border-none focus:outline-none text-gray-900 dark:text-white"
+                        placeholder="00"
+                      />
+                      <span class="text-gray-400 font-mono text-xl">:</span>
+                      <input
+                        v-model.number="editingTimerSeconds"
+                        type="number"
+                        min="0"
+                        max="59"
+                        class="w-16 text-center text-lg font-mono bg-transparent border-none focus:outline-none text-gray-900 dark:text-white"
+                        placeholder="00"
+                      />
+                    </div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Format: HH:MM:SS</p>
+                  </div>
+
+                  <!-- Completion Message -->
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Completion Message
+                    </label>
+                    <textarea
+                      v-model="editingTimerCompletionMessage"
+                      rows="3"
+                      class="w-full px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white resize-none"
+                      placeholder="Optional: Message to display when timer reaches 0"
+                    />
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">This message will be displayed when the timer completes</p>
+                  </div>
+                </div>
+                
+                <!-- Modal Footer -->
+                <div class="flex items-center justify-end gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
+                  <button
+                    @click="cancelEditTimerName"
+                    class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    @click="saveTimerEdits(editingTimerId)"
+                    class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </div>
+            </div>
+          </Teleport>
 
           <!-- Broadcast Live Message Section -->
           <div v-if="isAuthenticated" class="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-gray-700/50 p-6 shadow-lg">
@@ -606,58 +722,53 @@
               <div class="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center mr-3">
                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-          </svg>
-        </div>
-              <h3 class="text-xl font-bold text-gray-900 dark:text-white">Live Broadcast</h3>
-      </div>
-      
-    
-          
-
-                  <div class="flex space-x-3">
-                <input
-                  v-model="liveMessage"
-                  type="text"
-                      class="flex-1 px-4 py-3 bg-white/70 dark:bg-gray-700/70 border border-gray-200 dark:border-gray-600 rounded-xl text-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-                  placeholder="Type your live message here..."
-                />
-                <button 
-                  @click="updateLiveMessage"
-                  :disabled="!liveMessage.trim()"
-                      class="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-6 py-3 rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-105 shadow-lg"
-                    >
-                      <div class="flex items-center">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-                        </svg>
-                        Broadcast
-                      </div>
-                </button>
-                <button 
-                  @click="clearLiveMessage"
-                      class="bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white px-4 py-3 rounded-xl font-medium transition-all duration-200 transform hover:scale-105 shadow-lg"
-                >
-                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                      </svg>
-                </button>
+                </svg>
               </div>
- 
-          
-    </div>
+              <h3 class="text-xl font-bold text-gray-900 dark:text-white">Live Broadcast</h3>
+            </div>
 
-    <!-- Live Message Display (for all users) -->
+            <div class="flex space-x-3">
+              <input
+                v-model="liveMessage"
+                type="text"
+                class="flex-1 px-4 py-3 bg-white/70 dark:bg-gray-700/70 border border-gray-200 dark:border-gray-600 rounded-xl text-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                placeholder="Type your live message here..."
+              />
+              <button 
+                @click="updateLiveMessage"
+                :disabled="!liveMessage.trim()"
+                class="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-6 py-3 rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 shadow-lg"
+              >
+                <div class="flex items-center">
+                  <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                  </svg>
+                  Broadcast
+                </div>
+              </button>
+              <button 
+                @click="clearLiveMessage"
+                class="bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white px-4 py-3 rounded-xl font-medium transition-colors duration-200 shadow-lg"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Live Message Display (for all users) -->
           <div v-if="currentLiveMessage" class="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl p-6 border border-blue-200/50 dark:border-blue-700/50 shadow-lg">
             <div class="flex items-center space-x-3">
               <div class="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
               <span class="text-sm font-semibold text-blue-800 dark:text-blue-200">Live Message:</span>
-      </div>
+            </div>
             <p class="text-blue-900 dark:text-blue-100 mt-2 text-lg font-medium">{{ currentLiveMessage }}</p>
-    </div>
+          </div>
+        </div>
       </div>
-            </div>
-            </div>
-
+      </div>
+    </div>
   </div>
 </template>
 
@@ -678,6 +789,7 @@ const liveConnections = ref([])
 // Timer creation form
 const newTimer = ref({
   title: '',
+  completionMessage: '',
   duration: 0
 })
 const durationHours = ref(0)
@@ -707,19 +819,54 @@ const customPresets = ref([
 const liveMessage = ref('')
 const currentLiveMessage = ref('')
 
-// Timer name editing
+// Timer editing state
 const editingTimerId = ref(null)
+const editingTimerField = ref(null) // 'name', 'duration', or 'completion'
 const editingTimerName = ref('')
+const editingTimerCompletionMessage = ref('')
+const editingTimerHours = ref(0)
+const editingTimerMinutes = ref(0)
+const editingTimerSeconds = ref(0)
 
 // Drag and drop state
 const draggedIndex = ref(null)
 const dragOverIndex = ref(null)
 
 const formatTime = (seconds) => {
-  const mins = Math.floor(seconds / 60)
+  const hours = Math.floor(seconds / 3600)
+  const mins = Math.floor((seconds % 3600) / 60)
   const secs = seconds % 60
+  
+  if (hours > 0) {
+    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+  }
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
 }
+
+// Computed property to determine which timer to display in preview (matches shareable link logic)
+const displayTimer = computed(() => {
+  if (timers.value.length === 0) return null
+  
+  // Priority: 1. Selected timer (if exists), 2. Active timer, 3. First timer
+  let targetTimer = null
+  
+  // If there's a selected timer ID, try to find it first
+  if (selectedTimerId.value) {
+    targetTimer = timers.value.find(t => t.id === selectedTimerId.value)
+  }
+  
+  // If no selected timer or selected timer not found, find active timer
+  if (!targetTimer) {
+    targetTimer = timers.value.find(t => t.isActive)
+  }
+  
+  // If still no timer, use the first one
+  if (!targetTimer) {
+    targetTimer = timers.value[0]
+  }
+  
+  return targetTimer
+})
 
 const formatConnectionTime = (connectedAt) => {
   const now = new Date()
@@ -786,6 +933,7 @@ const fetchTimers = async () => {
         id: timer.id,
         title: timer.title,
         description: timer.description,
+        completionMessage: timer.completionMessage || null,
         remainingTime: remainingTime,
         isActive: timer.isActive,
         isPaused: !timer.isActive && remainingTime > 0,
@@ -828,6 +976,7 @@ const updateTimerDuration = () => {
 
 const resetTimerForm = () => {
   newTimer.value.title = ''
+  newTimer.value.completionMessage = ''
   newTimer.value.duration = 0
   durationHours.value = 0
   durationMinutes.value = 0
@@ -858,9 +1007,9 @@ const getPlayButtonClass = () => {
   if (!selectedTimer) return 'bg-gray-400 text-white cursor-not-allowed'
   
   if (selectedTimer.isActive) {
-    return 'bg-yellow-500 hover:bg-yellow-600 text-white hover:scale-105'
+    return 'bg-yellow-500 hover:bg-yellow-600 text-white'
   }
-  return 'bg-green-500 hover:bg-green-600 text-white hover:scale-105'
+  return 'bg-green-500 hover:bg-green-600 text-white'
 }
 
 const getSelectedTimerName = () => {
@@ -1000,6 +1149,7 @@ const createTimer = async () => {
     const requestBody = {
       title: newTimer.value.title.trim(),
       description: `Timer created for ${room.value.name}`,
+      completionMessage: newTimer.value.completionMessage?.trim() || undefined,
       duration: durationMs
     }
     
@@ -1153,6 +1303,15 @@ const deleteTimer = async (timerId) => {
 // Timer selection and control methods
 const selectTimer = (timerId) => {
   selectedTimerId.value = timerId
+  
+  // Broadcast timer selection to all room viewers via socket
+  if (socket.value && socket.value.connected && room.value?.id) {
+    socket.value.emit('timer-selected', {
+      roomId: room.value.id,
+      timerId: timerId
+    })
+    console.log('Broadcasted timer selection:', timerId)
+  }
 }
 
 const getPlayButtonText = () => {
@@ -1225,7 +1384,13 @@ const toggleShowTimerName = async () => {
   // Save the setting to the room
   try {
     const token = useCookie('auth-token')
-    const response = await $fetch(`/api/rooms/${route.params.id}`, {
+    const config = useRuntimeConfig()
+    const apiBase = config.public.apiBase || ''
+    
+    // Use full API URL to prevent Vue Router from intercepting it
+    const apiUrl = `${apiBase}/api/rooms/${route.params.id}`
+    
+    const response = await $fetch(apiUrl, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token.value}`,
@@ -1233,18 +1398,22 @@ const toggleShowTimerName = async () => {
       },
       body: {
         showTimerName: showTimerName.value
+      },
+      // Prevent Nuxt from treating this as a navigation
+      retry: 0,
+      // Don't throw on error, handle it manually
+      onRequestError({ error }) {
+        console.error('Request error updating show timer name:', error)
+      },
+      onResponseError({ response }) {
+        console.error('Response error updating show timer name:', response.status, response._data)
       }
     })
     
     if (response.success) {
-      // Broadcast the setting change to all connected users
-      if (socket.value) {
-        socket.value.emit('room-setting-changed', {
-          roomId: route.params.id,
-          setting: 'showTimerName',
-          value: showTimerName.value
-        })
-      }
+      // Server already broadcasts the setting change via socketService.emitToRoom
+      // No need to emit from client side
+      console.log('Show timer name setting updated successfully:', showTimerName.value)
     }
   } catch (error) {
     console.error('Error updating show timer name setting:', error)
@@ -1255,11 +1424,6 @@ const toggleShowTimerName = async () => {
 
 
 
-const copyRoomCode = () => {
-  navigator.clipboard.writeText(room.value.shareToken)
-  // You could add a toast notification here
-}
-
 const shareRoom = () => {
   const shareUrl = `${window.location.origin}/room/${room.value.shareToken}`
   console.log('Share URL:', shareUrl)
@@ -1268,66 +1432,81 @@ const shareRoom = () => {
   alert(`Room shared! URL copied to clipboard: ${shareUrl}`)
 }
 
-const copyShareLink = () => {
-  const shareUrl = `${window.location.origin}/room/${room.value.shareToken}`
-  navigator.clipboard.writeText(shareUrl)
-  // You could add a toast notification here instead of alert
-  console.log('Share link copied to clipboard:', shareUrl)
+// Timer editing methods
+const openEditModal = (timer) => {
+  if (!isAuthenticated.value || timer.isActive) return
+  
+  editingTimerId.value = timer.id
+  editingTimerField.value = 'all'
+  editingTimerName.value = timer.title || ''
+  editingTimerCompletionMessage.value = timer.completionMessage || ''
+  
+  // Convert milliseconds to hours, minutes, seconds
+  const durationMs = timer.duration || 0
+  const totalSeconds = Math.floor(durationMs / 1000)
+  editingTimerHours.value = Math.floor(totalSeconds / 3600)
+  editingTimerMinutes.value = Math.floor((totalSeconds % 3600) / 60)
+  editingTimerSeconds.value = totalSeconds % 60
 }
 
-// Timer name editing methods
-const startEditTimerName = (timerId, currentName) => {
-  if (!isAuthenticated.value) return
-  
-  editingTimerId.value = timerId
-  editingTimerName.value = currentName
-  
-  // Focus the input field after the DOM updates
-  nextTick(() => {
-    const input = document.querySelector(`input[ref="timerNameInput"]`)
-    if (input) {
-      input.focus()
-      input.select()
-    }
-  })
-}
-
-const saveTimerName = async (timerId) => {
-  if (!isAuthenticated.value || !editingTimerName.value.trim()) {
+const saveTimerEdits = async (timerId) => {
+  if (!isAuthenticated.value) {
     cancelEditTimerName()
+    return
+  }
+  
+  // Validate inputs
+  if (!editingTimerName.value.trim()) {
+    alert('Timer name is required')
+    return
+  }
+  
+  const totalSeconds = (editingTimerHours.value * 3600) + (editingTimerMinutes.value * 60) + editingTimerSeconds.value
+  if (totalSeconds <= 0) {
+    alert('Duration must be greater than 0')
     return
   }
   
   try {
     const token = useCookie('auth-token')
+    const updateBody = {
+      title: editingTimerName.value.trim(),
+      duration: totalSeconds * 1000, // Convert to milliseconds
+      completionMessage: editingTimerCompletionMessage.value.trim() || undefined
+    }
+    
     const response = await $fetch(`/api/timers/${timerId}`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token.value}`,
         'Content-Type': 'application/json'
       },
-      body: {
-        title: editingTimerName.value.trim()
-      }
+      body: updateBody
     })
     
     if (response.success) {
-      // Update the timer in the local array
-      const timerIndex = timers.value.findIndex(t => t.id === timerId)
-      if (timerIndex !== -1) {
-        timers.value[timerIndex].title = editingTimerName.value.trim()
-      }
+      // Refresh timers to get updated state from server
+      await fetchTimers()
+      cancelEditTimerName()
     }
   } catch (error) {
-    console.error('Error updating timer name:', error)
-  } finally {
-    cancelEditTimerName()
+    console.error('Error updating timer:', error)
+    if (error.data?.message) {
+      alert(`Error: ${error.data.message}`)
+    } else {
+      alert('Failed to update timer. Please try again.')
+    }
   }
 }
 
 const cancelEditTimerName = () => {
   editingTimerId.value = null
+  editingTimerField.value = null
   editingTimerName.value = ''
+  editingTimerCompletionMessage.value = ''
+  editingTimerHours.value = 0
+  editingTimerMinutes.value = 0
+  editingTimerSeconds.value = 0
 }
 
 // Drag and drop methods
@@ -1405,17 +1584,6 @@ const reorderTimers = async (timerIds) => {
   }
 }
 
-const leaveRoom = async () => {
-  if (confirm('Are you sure you want to leave this room?')) {
-    try {
-      await api(`/rooms/${route.params.id}/leave`, { method: 'POST' })
-      leaveRoomSocket(route.params.id)
-      await navigateTo('/rooms')
-    } catch (error) {
-      console.error('Error leaving room:', error)
-    }
-  }
-}
 
 // Socket event listeners with robust state management
 const setupSocketListeners = () => {
@@ -1434,7 +1602,8 @@ const setupSocketListeners = () => {
             ...timers.value[timerIndex],
             remainingTime,
             isActive: data.isActive,
-            isPaused: !data.isActive && data.duration > 0
+            isPaused: !data.isActive && data.duration > 0,
+            completionMessage: data.completionMessage !== undefined ? data.completionMessage : timers.value[timerIndex].completionMessage
           }
           console.log('Updated timer from socket:', timers.value[timerIndex])
         }
@@ -1462,7 +1631,8 @@ const setupSocketListeners = () => {
             ...timers.value[timerIndex],
             isActive: false,
             isPaused: false,
-            remainingTime: 0
+            remainingTime: 0,
+            completionMessage: data.completionMessage || timers.value[timerIndex].completionMessage
           }
           
         }
@@ -1548,6 +1718,7 @@ const setupSocketListeners = () => {
               id: timer.id,
               title: timer.title,
               description: timer.description,
+              completionMessage: timer.completionMessage || null,
               remainingTime: remainingTime,
               isActive: timer.isActive,
               isPaused: !timer.isActive && remainingTime > 0,
@@ -1612,20 +1783,19 @@ const setupSocketListeners = () => {
     })
     
     
-    // Handle user count updates
+    // Handle user count updates (simple count only - use as fallback)
     socket.value.on('user-count', (count) => {
-      console.log('User count updated:', count)
-      liveViewerCount.value = count
+      console.log('User count updated (simple):', count)
+      // Only update if we don't have more detailed info
+      if (liveViewerCount.value === 0 || count !== liveViewerCount.value) {
+        liveViewerCount.value = count
+      }
     })
     
-    // Handle detailed user count updates with connection info
+    // Handle detailed user count updates with connection info - PRIMARY SOURCE OF TRUTH
     socket.value.on('user-count-update', (data) => {
       try {
         console.log('User count update with details:', data)
-        console.log('Current route.params.id:', route.params.id)
-        console.log('Data roomId:', data?.roomId)
-        console.log('Room ID match:', data?.roomId === route.params.id)
-        console.log('Room ID match (string):', String(data?.roomId) === String(route.params.id))
         
         // Use both room ID and share token for comparison
         const isRoomMatch = data?.roomId === route.params.id || 
@@ -1634,30 +1804,23 @@ const setupSocketListeners = () => {
                            String(data?.roomId) === String(room.value?.id)
         
         if (isRoomMatch) {
-          liveViewerCount.value = data.count || 0
-          liveConnections.value = data.connections || []
-          console.log('✅ Updated live viewer count:', liveViewerCount.value)
-          console.log('✅ Updated live connections:', liveConnections.value.length)
+          // Always use user-count-update as the source of truth
+          // This ensures we have accurate counts that exclude admin
+          liveViewerCount.value = data.count ?? 0
+          liveConnections.value = data.connections ?? []
+          console.log('✅ Updated live viewer count:', liveViewerCount.value, 'connections:', liveConnections.value.length)
         } else {
           console.log('❌ Room ID mismatch, ignoring event')
-          console.log('Available room data:', { 
-            routeId: route.params.id, 
-            roomId: room.value?.id, 
-            shareToken: room.value?.shareToken 
-          })
         }
       } catch (error) {
         console.error('Error handling user-count-update:', error)
       }
     })
     
-    // Handle user joined events
+    // Handle user joined events (viewers only - admin events are filtered on server)
     socket.value.on('user-joined', (data) => {
       try {
-        console.log('User joined:', data)
-        console.log('Current route.params.id:', route.params.id)
-        console.log('Data roomId:', data?.roomId)
-        console.log('Room ID match:', data?.roomId === route.params.id)
+        console.log('User joined (viewer):', data)
         
         // Use both room ID and share token for comparison
         const isRoomMatch = data?.roomId === route.params.id || 
@@ -1666,33 +1829,25 @@ const setupSocketListeners = () => {
                            String(data?.roomId) === String(room.value?.id)
         
         if (isRoomMatch && data?.connection) {
-          liveViewerCount.value = data.totalUsers || 0
-          // Add new connection to the list
+          // Update count from event
+          liveViewerCount.value = data.totalUsers ?? 0
+          
+          // Add connection only if not already present (safety check)
           const existingIndex = liveConnections.value.findIndex(c => c.socketId === data.connection.socketId)
           if (existingIndex === -1) {
             liveConnections.value.push(data.connection)
-            console.log('✅ Added new connection:', data.connection.browser, 'on', data.connection.os)
+            console.log('✅ Added new viewer connection:', data.connection.browser, 'on', data.connection.os)
           }
-        } else {
-          console.log('❌ Room ID mismatch or missing connection data, ignoring event')
-          console.log('Available room data:', { 
-            routeId: route.params.id, 
-            roomId: room.value?.id, 
-            shareToken: room.value?.shareToken 
-          })
         }
       } catch (error) {
         console.error('Error handling user-joined:', error)
       }
     })
     
-    // Handle user left events
+    // Handle user left events (viewers only - admin events are filtered on server)
     socket.value.on('user-left', (data) => {
       try {
-        console.log('User left:', data)
-        console.log('Current route.params.id:', route.params.id)
-        console.log('Data roomId:', data?.roomId)
-        console.log('Room ID match:', data?.roomId === route.params.id)
+        console.log('User left (viewer):', data)
         
         // Use both room ID and share token for comparison
         const isRoomMatch = data?.roomId === route.params.id || 
@@ -1701,19 +1856,14 @@ const setupSocketListeners = () => {
                            String(data?.roomId) === String(room.value?.id)
         
         if (isRoomMatch) {
-          liveViewerCount.value = data.totalUsers || 0
+          // Update count from event
+          liveViewerCount.value = data.totalUsers ?? 0
+          
           // Remove connection from the list
           const beforeCount = liveConnections.value.length
           liveConnections.value = liveConnections.value.filter(c => c.socketId !== data.socketId)
           const afterCount = liveConnections.value.length
-          console.log('✅ Removed connection, count changed from', beforeCount, 'to', afterCount)
-        } else {
-          console.log('❌ Room ID mismatch, ignoring event')
-          console.log('Available room data:', { 
-            routeId: route.params.id, 
-            roomId: room.value?.id, 
-            shareToken: room.value?.shareToken 
-          })
+          console.log('✅ Removed viewer connection, count changed from', beforeCount, 'to', afterCount)
         }
       } catch (error) {
         console.error('Error handling user-left:', error)
