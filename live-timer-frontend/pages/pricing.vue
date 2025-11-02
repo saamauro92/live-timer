@@ -194,13 +194,18 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import { getStripePriceId } from '~/composables/useStripeConfig';
+
 const { isAuthenticated } = useAuth();
 const { createCheckoutSession } = useStripe();
 
-const billingPeriod = ref("monthly");
+const billingPeriod = ref<"monthly" | "yearly">("monthly");
 
-const selectPlan = async (plan) => {
+const selectPlan = async (plan: "free" | "pro" | "enterprise") => {
+  // Ensure we're on the client side
+  if (process.server) return;
+  
   if (!isAuthenticated.value) {
     await navigateTo("/register");
     return;
@@ -217,11 +222,14 @@ const selectPlan = async (plan) => {
   }
 
   try {
-    const priceId = plan === "pro" ? (billingPeriod.value === "yearly" ? "price_pro_yearly" : "price_pro_monthly") : "price_enterprise_monthly";
-
+    const priceId = getStripePriceId(plan, billingPeriod.value);
+    
+    // Use window.location for redirect to avoid Nuxt navigation conflicts
     await createCheckoutSession(priceId);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating checkout session:", error);
+    // Show user-friendly error message
+    alert(error.message || "Failed to start checkout. Please try again.");
   }
 };
 

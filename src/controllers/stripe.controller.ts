@@ -3,7 +3,13 @@ import Stripe from "stripe";
 import { prisma } from "../config/database";
 import { logger } from "../utils/logger";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+// Validate Stripe secret key is set
+if (!process.env.STRIPE_SECRET_KEY) {
+  logger.error("STRIPE_SECRET_KEY is not set in environment variables");
+  throw new Error("STRIPE_SECRET_KEY is required");
+}
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2024-12-18.acacia",
 });
 
@@ -323,7 +329,25 @@ export class StripeController {
   async handleWebhook(req: Request, res: Response): Promise<void> {
     try {
       const sig = req.headers["stripe-signature"] as string;
-      const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+      const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+      if (!endpointSecret) {
+        logger.error("STRIPE_WEBHOOK_SECRET is not set in environment variables");
+        res.status(500).json({
+          success: false,
+          message: "Webhook secret not configured",
+        });
+        return;
+      }
+
+      if (!sig) {
+        logger.error("Missing stripe-signature header");
+        res.status(400).json({
+          success: false,
+          message: "Missing stripe-signature header",
+        });
+        return;
+      }
 
       let event: Stripe.Event;
 
@@ -331,7 +355,10 @@ export class StripeController {
         event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
       } catch (err) {
         logger.error("Webhook signature verification failed:", err);
-        res.status(400).send("Webhook signature verification failed");
+        res.status(400).json({
+          success: false,
+          message: "Webhook signature verification failed",
+        });
         return;
       }
 
