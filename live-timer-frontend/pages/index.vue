@@ -1,23 +1,30 @@
 <template>
   <div>
-    <!-- Hero Section -->
-    <section class="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 py-20">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center">
-          <h1 class="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6">
-            Live Timer
-            <span class="text-blue-600">SaaS</span>
-          </h1>
-          <p class="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-3xl mx-auto">
-            Real-time collaborative timers for teams. Create rooms, start timers, and work together seamlessly.
-          </p>
-          <div class="flex flex-col sm:flex-row gap-4 justify-center">
-            <NuxtLink to="/register" class="btn-primary text-lg px-8 py-3"> Get Started Free </NuxtLink>
-            <NuxtLink to="/login" class="btn-secondary text-lg px-8 py-3"> Sign In </NuxtLink>
+    <!-- Storyblok Content -->
+    <div v-if="story && story.content">
+      <StoryblokComponent :blok="story.content" />
+    </div>
+    
+    <!-- Fallback Static Content -->
+    <div v-else>
+      <!-- Hero Section -->
+      <section class="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 py-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div class="text-center">
+            <h1 class="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6">
+              Live Timer
+              <span class="text-blue-600">SaaS</span>
+            </h1>
+            <p class="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-3xl mx-auto">
+              Real-time collaborative timers for teams. Create rooms, start timers, and work together seamlessly.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+              <NuxtLink to="/register" class="btn-primary text-lg px-8 py-3"> Get Started Free </NuxtLink>
+              <NuxtLink to="/login" class="btn-secondary text-lg px-8 py-3"> Sign In </NuxtLink>
+            </div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
 
     <!-- How It Works Section -->
     <section class="py-20 bg-white dark:bg-gray-900">
@@ -176,13 +183,57 @@
         </NuxtLink>
       </div>
     </section>
+    </div>
   </div>
 </template>
 
-<script setup>
-// SEO
+<script setup lang="ts">
+import type { StoryblokStory } from '~/types/storyblok'
+
+const { getHomepage } = useStoryblokContent()
+
+// Try to fetch homepage from Storyblok
+const { data: story } = await useAsyncData<StoryblokStory | null>(
+  'homepage-story',
+  async () => {
+    try {
+      return await getHomepage()
+    } catch (error) {
+      console.warn('Failed to fetch homepage from Storyblok, using static content:', error)
+      return null
+    }
+  },
+  {
+    default: () => null,
+  }
+)
+
+// Set SEO metadata
+const seoTitle = computed(() => {
+  if (story.value?.content?.seo_title) {
+    return story.value.content.seo_title
+  }
+  if (story.value?.content?.title) {
+    return story.value.content.title
+  }
+  return 'Live Timer - Real-time Collaborative Timers for Teams'
+})
+
+const seoDescription = computed(() => {
+  if (story.value?.content?.seo_description) {
+    return story.value.content.seo_description
+  }
+  if (story.value?.content?.description) {
+    return story.value.content.description
+  }
+  return 'Real-time collaborative timers for teams. Create rooms, start timers, and work together seamlessly.'
+})
+
 useHead({
-  title: "Live Timer - Real-time Collaborative Timers for Teams",
-  meta: [{ name: "description", content: "Real-time collaborative timers for teams. Create rooms, start timers, and work together seamlessly." }],
-});
+  title: seoTitle.value,
+  meta: [
+    { name: 'description', content: seoDescription.value },
+    ...(story.value?.content?.seo_keywords ? [{ name: 'keywords', content: story.value.content.seo_keywords }] : []),
+  ],
+})
 </script>

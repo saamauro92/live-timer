@@ -3,7 +3,7 @@ export default defineNuxtConfig({
   compatibilityDate: "2025-07-15",
   devtools: { enabled: true },
 
-  modules: ["@nuxtjs/tailwindcss", "@pinia/nuxt", "@vueuse/nuxt", "@nuxtjs/color-mode", "@nuxtjs/google-fonts"],
+  modules: ["@nuxtjs/tailwindcss", "@pinia/nuxt", "@vueuse/nuxt", "@nuxtjs/color-mode", "@nuxtjs/google-fonts", "@storyblok/nuxt"],
 
   devServer: {
     port: 3000,
@@ -45,6 +45,16 @@ export default defineNuxtConfig({
       socketUrl: process.env.NUXT_PUBLIC_SOCKET_URL || "http://localhost:3001",
       stripePublishableKey: process.env.NUXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "",
       googleClientId: process.env.NUXT_PUBLIC_GOOGLE_CLIENT_ID || "",
+      storyblokAccessToken: process.env.NUXT_PUBLIC_STORYBLOK_ACCESS_TOKEN || "",
+      storyblokVersion: process.env.NUXT_PUBLIC_STORYBLOK_VERSION || "draft",
+    },
+  },
+
+  storyblok: {
+    accessToken: process.env.NUXT_PUBLIC_STORYBLOK_ACCESS_TOKEN || "",
+    version: process.env.NUXT_PUBLIC_STORYBLOK_VERSION || "draft",
+    apiOptions: {
+      region: "us", // or 'eu' based on your Storyblok space region
     },
   },
 
@@ -72,6 +82,15 @@ export default defineNuxtConfig({
           "Access-Control-Allow-Credentials": "true",
         },
       },
+      // Exclude existing routes from catch-all Storyblok handler
+      "/login": { prerender: false },
+      "/register": { prerender: false },
+      "/dashboard": { prerender: false },
+      "/billing": { prerender: false },
+      "/pricing": { prerender: false },
+      "/rooms/**": { prerender: false },
+      "/room/**": { prerender: false },
+      "/auth/**": { prerender: false },
     },
   },
 

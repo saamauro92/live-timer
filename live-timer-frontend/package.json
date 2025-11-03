@@ -15,6 +15,8 @@
     "@nuxtjs/tailwindcss": "^6.14.0",
     "@pinia/nuxt": "^0.11.2",
     "@sidebase/nuxt-auth": "^1.1.0",
+    "@storyblok/nuxt": "^8.2.1",
+    "@storyblok/vue": "^9.4.1",
     "@stripe/stripe-js": "^4.1.0",
     "@vueuse/nuxt": "^13.9.0",
     "nuxt": "^4.1.2",
