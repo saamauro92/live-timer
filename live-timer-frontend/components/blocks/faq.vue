@@ -1,42 +1,48 @@
 <template>
-  <section class="py-20 bg-gray-50 dark:bg-gray-900">
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+  <section class="py-20 bg-white relative overflow-hidden">
+    <!-- Subtle background decoration -->
+    <div class="absolute top-0 right-0 w-64 h-64 bg-gray-50 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
+    <div class="absolute bottom-0 left-0 w-64 h-64 bg-gray-50 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
+
+    <div class="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="text-center mb-16">
-        <h2 v-if="title" class="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+        <h2 v-if="title" class="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4 tracking-tight">
           {{ title }}
         </h2>
-        <p v-if="description" class="text-xl text-gray-600 dark:text-gray-300">
+        <p v-if="description" class="text-lg md:text-xl text-gray-600 leading-relaxed">
           {{ description }}
         </p>
       </div>
 
-      <div v-if="faqsList && faqsList.length > 0" class="space-y-4">
+      <div v-if="faqsList && faqsList.length > 0" class="space-y-3">
         <div
           v-for="(faq, index) in faqsList"
           :key="faq._uid || index"
-          class="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-300"
+          class="bg-white rounded-lg border border-gray-200 overflow-hidden transition-all duration-300 group"
           :class="{
-            'hover:shadow-lg': !isAccordion || openItems.has(index),
+            'hover:border-gray-300': !isAccordion || openItems.has(index),
           }"
         >
+          <!-- Decorative accent line -->
+          <div class="absolute left-0 top-0 bottom-0 w-1 bg-gray-900 opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
           <!-- Question button -->
           <button
             v-if="isAccordion"
             type="button"
-            class="w-full px-6 py-5 text-left flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset transition-colors duration-200"
+            class="w-full px-6 py-5 text-left flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-inset transition-colors duration-200"
             :class="{
-              'bg-gray-50 dark:bg-gray-700': openItems.has(index),
-              'hover:bg-gray-50 dark:hover:bg-gray-700': !openItems.has(index),
+              'bg-gray-50': openItems.has(index),
+              'hover:bg-gray-50': !openItems.has(index),
             }"
             @click="toggleItem(index)"
             @keydown.enter="toggleItem(index)"
             @keydown.space.prevent="toggleItem(index)"
           >
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white pr-4">
+            <h3 class="text-lg font-semibold text-gray-900 pr-4">
               {{ faq.question }}
             </h3>
             <svg
-              class="w-6 h-6 text-gray-500 dark:text-gray-400 flex-shrink-0 transition-transform duration-300"
+              class="w-5 h-5 text-gray-500 flex-shrink-0 transition-transform duration-300"
               :class="{ 'rotate-180': openItems.has(index) }"
               fill="none"
               stroke="currentColor"
@@ -47,8 +53,8 @@
           </button>
 
           <!-- Question (non-accordion) -->
-          <div v-else class="px-6 py-5 border-b border-gray-200 dark:border-gray-700">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+          <div v-else class="px-6 py-5 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900">
               {{ faq.question }}
             </h3>
           </div>
@@ -56,15 +62,15 @@
           <!-- Answer -->
           <div
             v-if="!isAccordion || openItems.has(index)"
-            class="px-6 py-5 text-gray-600 dark:text-gray-300 leading-relaxed"
+            class="px-6 py-5 text-gray-600 leading-relaxed"
             :class="{
-              'border-t border-gray-200 dark:border-gray-700': !isAccordion,
+              'border-t border-gray-100': !isAccordion,
             }"
           >
             <div v-if="typeof faq.answer === 'object' && faq.answer !== null">
               <StoryblokRichText :content="faq.answer" />
             </div>
-            <div v-else class="prose prose-sm dark:prose-invert max-w-none">
+            <div v-else class="prose prose-sm max-w-none">
               <p v-html="formatAnswer(faq.answer)"></p>
             </div>
           </div>

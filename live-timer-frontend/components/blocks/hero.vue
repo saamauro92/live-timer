@@ -1,61 +1,81 @@
 <template>
   <section
-    class="relative bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 py-24 md:py-32 overflow-hidden"
+    class="relative bg-white py-16 md:py-24 lg:py-32 overflow-hidden"
   >
-    <!-- Decorative background elements -->
-    <div class="absolute inset-0 overflow-hidden">
-      <div class="absolute -top-40 -right-40 w-80 h-80 bg-blue-300 dark:bg-blue-900 rounded-full mix-blend-multiply dark:mix-blend-soft-light filter blur-3xl opacity-20 animate-blob"></div>
-      <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-purple-300 dark:bg-purple-900 rounded-full mix-blend-multiply dark:mix-blend-soft-light filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
-      <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-indigo-300 dark:bg-indigo-900 rounded-full mix-blend-multiply dark:mix-blend-soft-light filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
+    <!-- Subtle background pattern -->
+    <div class="absolute inset-0 opacity-[0.02]">
+      <div class="absolute inset-0" style="background-image: radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0); background-size: 24px 24px;"></div>
     </div>
 
+    <!-- Decorative gradient blobs -->
+    <div class="absolute top-0 right-0 w-96 h-96 bg-gray-100 rounded-full mix-blend-multiply filter blur-3xl opacity-20 -translate-y-1/2 translate-x-1/2"></div>
+    <div class="absolute bottom-0 left-0 w-96 h-96 bg-gray-100 rounded-full mix-blend-multiply filter blur-3xl opacity-20 translate-y-1/2 -translate-x-1/2"></div>
+
     <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="text-center">
-        <h1 class="text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 dark:text-white mb-6 leading-tight">
-          <span class="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
+      <div :class="heroImageUrl ? 'grid lg:grid-cols-2 gap-12 lg:gap-16 items-center' : 'max-w-4xl mx-auto'">
+        <!-- Content Column -->
+        <div :class="heroImageUrl ? 'text-center lg:text-left' : 'text-center'">
+          <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight tracking-tight">
             {{ title }}
-          </span>
-        </h1>
-        <p v-if="subtitle || description" class="text-xl md:text-2xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8">
-          {{ subtitle || description }}
-        </p>
-        <div v-if="hasCta" class="flex flex-col sm:flex-row gap-4 justify-center items-center">
-          <!-- New format: links array -->
-          <template v-if="linksArray && linksArray.length > 0">
-            <StoryblokComponentVue
-              v-for="(linkItem, index) in linksArray"
-              :key="linkItem._uid || index"
-              :blok="linkItem as unknown as StoryblokComponent"
-            />
-          </template>
-          
-          <!-- Legacy format: nested cta components -->
-          <template v-else>
-            <StoryblokComponentVue
-              v-if="ctaComponent"
-              :blok="ctaComponent as unknown as StoryblokComponent"
-            />
-            <StoryblokComponentVue
-              v-if="ctaSecondaryComponent"
-              :blok="ctaSecondaryComponent as unknown as StoryblokComponent"
-            />
+          </h1>
+          <p v-if="subtitle || description" class="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto mb-10 leading-relaxed" :class="heroImageUrl ? 'lg:mx-0' : ''">
+            {{ subtitle || description }}
+          </p>
+          <div v-if="hasCta" class="flex flex-col sm:flex-row gap-4 justify-center items-center" :class="heroImageUrl ? 'lg:justify-start' : ''">
+            <!-- New format: links array -->
+            <template v-if="linksArray && linksArray.length > 0">
+              <StoryblokComponentVue
+                v-for="(linkItem, index) in linksArray"
+                :key="linkItem._uid || index"
+                :blok="linkItem as unknown as StoryblokComponent"
+              />
+            </template>
             
-            <!-- Legacy format: cta_text/cta_link -->
-            <NuxtLink
-              v-if="cta_text && !ctaComponent"
-              :to="ctaLink"
-              class="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
-            >
-              {{ cta_text }}
-            </NuxtLink>
-            <NuxtLink
-              v-if="cta_secondary_text && !ctaSecondaryComponent"
-              :to="ctaSecondaryLink"
-              class="px-8 py-4 bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-semibold rounded-xl border-2 border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-500 transition-all duration-200"
-            >
-              {{ cta_secondary_text }}
-            </NuxtLink>
-          </template>
+            <!-- Legacy format: nested cta components -->
+            <template v-else>
+              <StoryblokComponentVue
+                v-if="ctaComponent"
+                :blok="ctaComponent as unknown as StoryblokComponent"
+              />
+              <StoryblokComponentVue
+                v-if="ctaSecondaryComponent"
+                :blok="ctaSecondaryComponent as unknown as StoryblokComponent"
+              />
+              
+              <!-- Legacy format: cta_text/cta_link -->
+              <NuxtLink
+                v-if="cta_text && !ctaComponent"
+                :to="ctaLink"
+                class="px-8 py-4 bg-gray-900 text-white font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200 hover:bg-gray-800"
+              >
+                {{ cta_text }}
+              </NuxtLink>
+              <NuxtLink
+                v-if="cta_secondary_text && !ctaSecondaryComponent"
+                :to="ctaSecondaryLink"
+                class="px-8 py-4 bg-white text-gray-900 font-semibold rounded-lg border border-gray-200 hover:border-gray-300 transition-all duration-200"
+              >
+                {{ cta_secondary_text }}
+              </NuxtLink>
+            </template>
+          </div>
+        </div>
+
+        <!-- Image Column -->
+        <div v-if="heroImageUrl" class="relative">
+          <div class="relative rounded-2xl overflow-hidden bg-gray-50 p-8 shadow-lg border border-gray-100">
+            <img
+              :src="heroImageUrl"
+              :alt="imageAlt"
+              class="w-full h-auto object-contain rounded-lg"
+            />
+            <!-- Decorative corner accent -->
+            <div class="absolute top-0 right-0 w-20 h-20 bg-gray-900 opacity-5 rounded-bl-2xl"></div>
+          </div>
+          <!-- Decorative element -->
+          <div class="absolute -z-10 -bottom-4 -right-4 w-full h-full bg-gray-100 rounded-2xl"></div>
+          <!-- Additional decorative accent -->
+          <div class="absolute -z-20 -bottom-8 -right-8 w-full h-full bg-gray-50 rounded-2xl"></div>
         </div>
       </div>
     </div>
@@ -72,7 +92,7 @@ interface Props extends Partial<HeroBlock> {
 
 const props = defineProps<Props>()
 
-const { resolveLink } = useStoryblokContent()
+const { resolveLink, getImageUrl } = useStoryblokContent()
 
 const title = computed(() => props.title || '')
 const subtitle = computed(() => props.subtitle || '')
@@ -81,6 +101,18 @@ const cta_text = computed(() => props.cta_text || '')
 const cta_secondary_text = computed(() => props.cta_secondary_text || '')
 const ctaLink = computed(() => props.cta_link ? resolveLink(props.cta_link) : '#')
 const ctaSecondaryLink = computed(() => props.cta_secondary_link ? resolveLink(props.cta_secondary_link) : '#')
+
+// Image handling
+const heroImageUrl = computed(() => {
+  if (props.image) {
+    return getImageUrl(props.image, { width: 800, quality: 90 })
+  }
+  return ''
+})
+
+const imageAlt = computed(() => {
+  return props.image?.alt || props.title || 'Hero image'
+})
 
 // Handle new format: links array (primary format)
 const linksArray = computed(() => {
@@ -132,30 +164,5 @@ const hasCta = computed(() => {
 })
 </script>
 
-<style scoped>
-@keyframes blob {
-  0%, 100% {
-    transform: translate(0, 0) scale(1);
-  }
-  33% {
-    transform: translate(30px, -50px) scale(1.1);
-  }
-  66% {
-    transform: translate(-20px, 20px) scale(0.9);
-  }
-}
-
-.animate-blob {
-  animation: blob 7s infinite;
-}
-
-.animation-delay-2000 {
-  animation-delay: 2s;
-}
-
-.animation-delay-4000 {
-  animation-delay: 4s;
-}
-</style>
 
 

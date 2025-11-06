@@ -1,11 +1,15 @@
 <template>
-  <section class="py-20 bg-white dark:bg-gray-900">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+  <section class="py-20 bg-gray-50 relative overflow-hidden">
+    <!-- Decorative background elements -->
+    <div class="absolute top-0 left-1/4 w-96 h-96 bg-white rounded-full mix-blend-multiply filter blur-3xl opacity-30"></div>
+    <div class="absolute bottom-0 right-1/4 w-96 h-96 bg-white rounded-full mix-blend-multiply filter blur-3xl opacity-30"></div>
+
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="text-center mb-16">
-        <h2 v-if="title" class="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+        <h2 v-if="title" class="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4 tracking-tight">
           {{ title }}
         </h2>
-        <p v-if="description" class="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+        <p v-if="description" class="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
           {{ description }}
         </p>
       </div>
@@ -14,21 +18,23 @@
         <div
           v-for="(testimonial, index) in testimonialsList"
           :key="testimonial._uid || index"
-          class="bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-700 rounded-2xl p-8 shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-600 relative overflow-hidden"
+          class="bg-white rounded-xl p-8 border border-gray-200 hover:border-gray-300 transition-all duration-300 hover:shadow-lg relative overflow-hidden group"
         >
           <!-- Decorative quote icon -->
-          <div class="absolute top-4 right-4 text-blue-200 dark:text-blue-800 text-6xl font-serif leading-none opacity-20">
+          <div class="absolute top-6 right-6 text-gray-100 text-5xl font-serif leading-none">
             "
           </div>
+          <!-- Decorative accent on hover -->
+          <div class="absolute bottom-0 left-0 w-full h-1 bg-gray-900 opacity-0 group-hover:opacity-5 transition-opacity duration-300"></div>
 
           <!-- Rating stars -->
-          <div v-if="testimonial.rating" class="flex items-center mb-4">
-            <div class="flex text-yellow-400">
+          <div v-if="testimonial.rating" class="flex items-center mb-5">
+            <div class="flex text-amber-400">
               <svg
                 v-for="i in 5"
                 :key="i"
-                class="w-5 h-5"
-                :class="i <= Number(testimonial.rating) ? 'fill-current' : 'text-gray-300 dark:text-gray-600'"
+                class="w-4 h-4"
+                :class="i <= Number(testimonial.rating) ? 'fill-current' : 'text-gray-200'"
                 viewBox="0 0 20 20"
                 fill="currentColor"
               >
@@ -38,15 +44,15 @@
           </div>
 
           <!-- Quote text -->
-          <blockquote class="text-gray-700 dark:text-gray-200 mb-6 relative z-10 italic leading-relaxed">
+          <blockquote class="text-gray-700 mb-6 relative z-10 leading-relaxed">
             "{{ testimonial.quote }}"
           </blockquote>
 
           <!-- Author info -->
-          <div class="flex items-center pt-6 border-t border-gray-200 dark:border-gray-600">
+          <div class="flex items-center pt-6 border-t border-gray-100">
             <div
               v-if="testimonial.image && getImageUrl(testimonial.image)"
-              class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white font-bold mr-4 flex-shrink-0"
+              class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mr-4 flex-shrink-0 overflow-hidden"
             >
               <img
                 :src="getImageUrl(testimonial.image)"
@@ -56,15 +62,15 @@
             </div>
             <div
               v-else
-              class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white font-bold mr-4 flex-shrink-0"
+              class="w-12 h-12 rounded-full bg-gray-900 flex items-center justify-center text-white font-semibold mr-4 flex-shrink-0"
             >
               {{ testimonial.name.charAt(0).toUpperCase() }}
             </div>
             <div>
-              <div class="font-semibold text-gray-900 dark:text-white">
+              <div class="font-semibold text-gray-900">
                 {{ testimonial.name }}
               </div>
-              <div class="text-sm text-gray-600 dark:text-gray-400">
+              <div class="text-sm text-gray-600">
                 <span v-if="testimonial.role">{{ testimonial.role }}</span>
                 <span v-if="testimonial.role && testimonial.company">, </span>
                 <span v-if="testimonial.company">{{ testimonial.company }}</span>

@@ -10,6 +10,8 @@ import StoryblokStep from './blocks/step.vue'
 import StoryblokTestimonials from './blocks/testimonials.vue'
 import StoryblokStats from './blocks/stats.vue'
 import StoryblokFaq from './blocks/faq.vue'
+import StoryblokCta from './blocks/cta.vue'
+import StoryblokCtaBanner from './blocks/cta-banner.vue'
 import StoryblokText from './content/text.vue'
 import StoryblokLink from './core/link.vue'
 import StoryblokPage from './modules/page.vue'
@@ -34,6 +36,8 @@ const componentMap: Record<string, any> = {
   'block/testimonials': StoryblokTestimonials,
   'block/stats': StoryblokStats,
   'block/faq': StoryblokFaq,
+  'block/cta': StoryblokCta,
+  'block/cta-banner': StoryblokCtaBanner,
   'block/slider': StoryblokFallback, // TODO: Create slider component in blocks/
   
   // Content components (rich text, core)

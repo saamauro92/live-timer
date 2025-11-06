@@ -44,18 +44,18 @@ const linkUrl = computed(() => {
 })
 
 const linkClasses = computed(() => {
-  const base = 'font-semibold rounded-xl transition-all duration-200 inline-block text-center'
+  const base = 'font-semibold rounded-lg transition-all duration-200 inline-block text-center'
   
   const variants = {
-    primary: 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5',
-    secondary: 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-2 border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-500',
-    text: 'text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline',
+    primary: 'bg-gray-900 text-white shadow-sm hover:shadow-md hover:bg-gray-800',
+    secondary: 'bg-white text-gray-900 border border-gray-200 hover:border-gray-300',
+    text: 'text-gray-900 hover:text-gray-700 underline',
   }
   
   const sizes = {
     sm: 'px-4 py-2 text-sm',
-    md: 'px-8 py-4',
-    lg: 'px-10 py-5 text-lg',
+    md: 'px-6 py-3',
+    lg: 'px-8 py-4 text-lg',
   }
   
   return `${base} ${variants[variant.value]} ${sizes[size.value]}`

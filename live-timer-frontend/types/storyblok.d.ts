@@ -289,6 +289,39 @@ export interface FaqBlock extends StoryblokComponent {
   allow_multiple_open?: boolean;
 }
 
+export interface CtaBlock extends StoryblokComponent {
+  component: "block/cta";
+  title?: string;
+  description?: string;
+  // New format: links array with Link components
+  links?: StoryblokComponent[];
+  // Legacy format (for backward compatibility)
+  cta_text?: string;
+  cta_link?: StoryblokLink;
+  cta_secondary_text?: string;
+  cta_secondary_link?: StoryblokLink;
+  cta?: StoryblokComponent | StoryblokComponent[];
+  cta_secondary?: StoryblokComponent | StoryblokComponent[];
+  background_color?: "white" | "gray";
+  alignment?: "left" | "center" | "right";
+}
+
+export interface CtaBannerBlock extends StoryblokComponent {
+  component: "block/cta-banner";
+  title?: string;
+  description?: string;
+  // New format: links array with Link components
+  links?: StoryblokComponent[];
+  // Legacy format (for backward compatibility)
+  cta_text?: string;
+  cta_link?: StoryblokLink;
+  cta_secondary_text?: string;
+  cta_secondary_link?: StoryblokLink;
+  cta?: StoryblokComponent | StoryblokComponent[];
+  cta_secondary?: StoryblokComponent | StoryblokComponent[];
+  background_color?: "white" | "gray";
+}
+
 // Legacy types for backward compatibility
 export interface HeroSection extends HeroBlock {}
 export interface FeatureSection extends FeatureBlock {}
@@ -311,6 +344,8 @@ export type StoryblokComponentType =
   | TestimonialsBlock
   | StatsBlock
   | FaqBlock
+  | CtaBlock
+  | CtaBannerBlock
   // Legacy types
   | HeroSection
   | FeatureSection
