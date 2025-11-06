@@ -1,9 +1,9 @@
 <template>
   <div v-if="story">
-    <StoryblokComponent
-      v-for="blok in story.content.body"
+    <StoryblokComponentVue
+      v-for="blok in body"
       :key="blok._uid"
-      :blok="blok"
+      :blok="blok as unknown as StoryblokComponent"
     />
   </div>
   <div v-else-if="loading" class="flex items-center justify-center min-h-screen">
@@ -21,16 +21,22 @@
 </template>
 
 <script setup lang="ts">
-import type { StoryblokStory } from '~/types/storyblok'
+import type { StoryblokStory, StoryblokComponent } from '~/types/storyblok'
+import StoryblokComponentVue from './StoryblokComponent.vue'
 
 interface Props {
   story?: StoryblokStory | null
   loading?: boolean
 }
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
   story: null,
   loading: false,
+})
+
+const body = computed(() => {
+  if (!props.story?.content?.body) return []
+  return props.story.content.body as StoryblokComponent[]
 })
 </script>
 

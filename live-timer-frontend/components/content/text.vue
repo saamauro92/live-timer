@@ -14,15 +14,15 @@
 <script setup lang="ts">
 import type { TextContent } from '~/types/storyblok'
 
-interface Props {
-  blok: TextContent
+interface Props extends Partial<TextContent> {
+  // Props are spread from StoryblokComponent, so we extend TextContent directly
 }
 
 const props = defineProps<Props>()
 
-const title = computed(() => props.blok.title || '')
-const content = computed(() => props.blok.content)
-const alignment = computed(() => props.blok.alignment || 'left')
+const title = computed(() => props.title || '')
+const content = computed(() => props.content)
+const alignment = computed(() => props.alignment || 'left')
 
 const titleClasses = computed(() => {
   const base = 'text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-6'

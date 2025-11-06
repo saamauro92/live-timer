@@ -6,7 +6,12 @@
 import type { StoryblokComponent } from '~/types/storyblok'
 import StoryblokHero from './blocks/hero.vue'
 import StoryblokFeature from './blocks/feature.vue'
+import StoryblokStep from './blocks/step.vue'
+import StoryblokTestimonials from './blocks/testimonials.vue'
+import StoryblokStats from './blocks/stats.vue'
+import StoryblokFaq from './blocks/faq.vue'
 import StoryblokText from './content/text.vue'
+import StoryblokLink from './core/link.vue'
 import StoryblokPage from './modules/page.vue'
 import StoryblokFallback from './StoryblokFallback.vue'
 
@@ -24,11 +29,21 @@ const componentMap: Record<string, any> = {
   'hero': StoryblokHero, // Legacy support
   'block/feature': StoryblokFeature,
   'feature': StoryblokFeature, // Legacy support
+  'block/step': StoryblokStep,
+  'block/steps': StoryblokStep, // Legacy support
+  'block/testimonials': StoryblokTestimonials,
+  'block/stats': StoryblokStats,
+  'block/faq': StoryblokFaq,
   'block/slider': StoryblokFallback, // TODO: Create slider component in blocks/
   
   // Content components (rich text, core)
   'content/text': StoryblokText,
   'text': StoryblokText, // Legacy support
+  
+  // Core components (reusable)
+  'core/link': StoryblokLink,
+  'link': StoryblokLink, // Legacy support
+  'Link': StoryblokLink, // Storyblok format (capital L)
   
   // Module components (page-level)
   'modules/page': StoryblokPage,

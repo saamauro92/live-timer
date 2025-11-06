@@ -82,29 +82,53 @@ export interface StoryblokSpace {
 
 // Block Components (Nestable - e.g., block/hero, block/slider)
 export interface HeroBlock extends StoryblokComponent {
-  component: 'block/hero' | 'hero'; // Support both formats
+  component: "block/hero" | "hero"; // Support both formats
   title: string;
   subtitle?: string;
   description?: string;
   image?: StoryblokImage;
+  // New format: links array with Link components
+  links?: StoryblokComponent[];
+  // Legacy format (for backward compatibility)
   cta_text?: string;
   cta_link?: StoryblokLink;
+  cta_secondary_text?: string;
+  cta_secondary_link?: StoryblokLink;
+  cta?: StoryblokComponent | StoryblokComponent[];
+  cta_secondary?: StoryblokComponent | StoryblokComponent[];
   background_color?: string;
+  custom_background_color?: string;
+  alignment?: "left" | "center" | "right";
 }
 
 export interface FeatureBlock extends StoryblokComponent {
-  component: 'block/feature' | 'feature'; // Support both formats
+  component: "block/feature" | "feature"; // Support both formats
   title: string;
   description?: string;
-  features?: Array<{
+  feature?: Array<{
+    _uid?: string;
+    component?: string;
     title: string;
-    description: string;
+    description: string | StoryblokRichText;
     icon?: StoryblokImage;
+    icon_color?: string;
+    type?: string;
   }>;
+  features?: Array<{
+    _uid?: string;
+    component?: string;
+    title: string;
+    description: string | StoryblokRichText;
+    icon?: StoryblokImage;
+    icon_color?: string;
+    type?: string;
+  }>;
+  layout?: "grid-3" | "grid-2" | "list";
+  background_color?: "white" | "gray" | "dark";
 }
 
 export interface SliderBlock extends StoryblokComponent {
-  component: 'block/slider';
+  component: "block/slider";
   slides?: Array<{
     title?: string;
     image?: StoryblokImage;
@@ -116,25 +140,36 @@ export interface SliderBlock extends StoryblokComponent {
 
 // Content Components (Rich text, core - e.g., content/text)
 export interface TextContent extends StoryblokComponent {
-  component: 'content/text' | 'text'; // Support both formats
+  component: "content/text" | "text"; // Support both formats
   title?: string;
   content?: StoryblokRichText;
-  alignment?: 'left' | 'center' | 'right';
+  alignment?: "left" | "center" | "right";
+}
+
+// Core Components (Reusable - e.g., core/link)
+export interface LinkContent extends StoryblokComponent {
+  component: "core/link" | "link";
+  label: string;
+  link?: StoryblokLink | string;
+  variant?: "primary" | "secondary" | "text";
+  size?: "sm" | "md" | "lg";
+  target?: string;
 }
 
 // Module Components (Page-level - e.g., modules/page, modules/use-cases)
 export interface PageModule extends StoryblokComponent {
-  component: 'modules/page' | 'page'; // Support both formats
+  component: "modules/page" | "page"; // Support both formats
   title: string;
   description?: string;
   seo_title?: string;
   seo_description?: string;
   seo_keywords?: string;
+  og_image?: StoryblokImage;
   body?: StoryblokComponent[];
 }
 
 export interface UseCasesModule extends StoryblokComponent {
-  component: 'modules/use-cases';
+  component: "modules/use-cases";
   title: string;
   description?: string;
   use_cases?: Array<{
@@ -148,7 +183,7 @@ export interface UseCasesModule extends StoryblokComponent {
 }
 
 export interface TestimonialsModule extends StoryblokComponent {
-  component: 'modules/testimonials';
+  component: "modules/testimonials";
   title?: string;
   testimonials?: Array<{
     name: string;
@@ -158,6 +193,100 @@ export interface TestimonialsModule extends StoryblokComponent {
     image?: StoryblokImage;
     rating?: number;
   }>;
+}
+
+// New Block Components for Homepage
+export interface StepBlock extends StoryblokComponent {
+  component: "block/step";
+  title: string;
+  description?: string;
+  steps?: Array<{
+    _uid?: string;
+    component?: string;
+    title: string;
+    description: string | StoryblokRichText;
+    icon?: StoryblokImage;
+    type?: string;
+  }>;
+  layout?: "horizontal" | "vertical";
+  show_numbers?: boolean;
+}
+
+// Legacy support
+export interface StepsBlock extends StepBlock {
+  component: "block/steps" | "block/step";
+}
+
+export interface UseCasesBlock extends StoryblokComponent {
+  component: "block/use-cases";
+  title: string;
+  description?: string;
+  use_cases?: Array<{
+    title: string;
+    description: string;
+    icon?: StoryblokImage;
+    image?: StoryblokImage;
+    link?: StoryblokLink;
+  }>;
+  layout?: "grid-3" | "grid-2" | "grid-4";
+}
+
+export interface TestimonialsBlock extends StoryblokComponent {
+  component: "block/testimonials";
+  title: string;
+  description?: string;
+  testimonials?: Array<{
+    _uid?: string;
+    component?: string;
+    quote: string;
+    name: string;
+    role?: string;
+    company?: string;
+    image?: StoryblokImage;
+    rating?: number | string;
+    featured?: boolean;
+    type?: string;
+  }>;
+  layout?: "carousel" | "grid-3" | "grid-2";
+  show_ratings?: boolean;
+  autoplay?: boolean;
+  autoplay_interval?: number;
+}
+
+export interface StatsBlock extends StoryblokComponent {
+  component: "block/stats";
+  title?: string;
+  description?: string;
+  stats?: Array<{
+    _uid?: string;
+    component?: string;
+    stat: string;
+    value?: string;
+    label?: string;
+    description?: string;
+    icon?: StoryblokImage;
+    highlight?: boolean;
+    type?: string;
+  }>;
+  layout?: "grid-4" | "grid-3" | "grid-2";
+  background_color?: "white" | "gray" | "dark" | "gradient";
+}
+
+export interface FaqBlock extends StoryblokComponent {
+  component: "block/faq";
+  title: string;
+  description?: string;
+  faqs?: Array<{
+    _uid?: string;
+    component?: string;
+    question: string;
+    answer: string | StoryblokRichText;
+    category?: string;
+    featured?: boolean;
+    type?: string;
+  }>;
+  layout?: "accordion" | "list";
+  allow_multiple_open?: boolean;
 }
 
 // Legacy types for backward compatibility
@@ -172,9 +301,16 @@ export type StoryblokComponentType =
   | FeatureBlock
   | SliderBlock
   | TextContent
+  | LinkContent
   | PageModule
   | UseCasesModule
   | TestimonialsModule
+  | StepBlock
+  | StepsBlock
+  | UseCasesBlock
+  | TestimonialsBlock
+  | StatsBlock
+  | FaqBlock
   // Legacy types
   | HeroSection
   | FeatureSection
